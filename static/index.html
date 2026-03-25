@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Skill Swap – a peer-to-peer platform to exchange skills."/>
+  <title>Skill Swap – Learn by Teaching, Teach by Learning</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css?v=7"/>
+</head>
+<body>
+
+<!-- ══ NAV ══════════════════════════════════════════ -->
+<nav>
+  <div class="nav-inner">
+    <div class="logo" onclick="showPage('home')">
+      <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="22" height="16" rx="5" fill="#2563EB"/>
+        <polygon points="4,18 13,18 4,26" fill="#2563EB"/>
+        <rect x="16" y="21" width="22" height="16" rx="5" fill="#C0392B"/>
+        <polygon points="36,37 27,37 36,45" fill="#C0392B"/>
+        <path d="M8 10h10M15 7.5l2.5 2.5L15 12.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M32 29H22M25 26.5l-2.5 2.5 2.5 2.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <span class="logo-wordmark">Skill Swap</span>
+    </div>
+    <div class="nav-links" id="nav-links">
+      <a onclick="showPage('home')">Home</a>
+      <a onclick="showPage('browse')">Browse</a>
+      <a id="nav-msg-link"      style="display:none" onclick="showPage('messages')">Message</a>
+      <a id="nav-sessions-link" style="display:none" onclick="showPage('sessions')">Sessions</a>
+      <button id="nav-getstarted-btn" class="nav-btn btn-nav-primary" onclick="openAuthModal('register')">Get Started</button>
+      <button id="nav-back-btn"       class="nav-btn btn-nav-outline" style="display:none" onclick="goBack()">Back</button>
+      <button id="nav-profile-btn"    class="nav-btn btn-nav-soft"    style="display:none" onclick="showPage('create-profile')">My Profile</button>
+      <button id="nav-logout-btn"     class="nav-btn btn-nav-outline" style="display:none" onclick="doLogout()">Log Out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ══ HOME ═════════════════════════════════════════ -->
+<div id="page-home" class="page active">
+  <section class="hero">
+    <h1>Learn by Teaching,<br/>Teach by Learning</h1>
+    <p>Connect with students and hobbyists to swap skills.<br/>No money, just knowledge exchange.</p>
+    <div class="hero-search">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      <input type="text" id="hero-q" placeholder="What skill do you want to learn? (e.g., Guitar, Python, French…)" onkeydown="if(event.key==='Enter')heroSearch()"/>
+    </div>
+    <div class="hero-btns">
+      <button class="btn-primary" id="hero-cta-btn" onclick="onGetStarted()">Create Profile</button>
+      <button class="btn-ghost"   onclick="showPage('browse')">Browse Skills</button>
+    </div>
+  </section>
+
+  <section class="how-section">
+    <div class="container">
+      <h2>How Skill Swap Works</h2>
+      <div class="how-grid">
+        <div class="how-card">
+          <div class="how-icon" style="background:#2563EB">👤</div>
+          <h3>Create Your Profile</h3>
+          <p>List the skills you can teach and the skills you want to learn. Build your knowledge portfolio and showcase your expertise.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon" style="background:#0891B2">🔍</div>
+          <h3>Find Your Match</h3>
+          <p>Browse users manually or get suggestions based on your interests. Connect with people who complement your skillset.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon" style="background:#7C3AED">💬</div>
+          <h3>Start Learning</h3>
+          <p>Exchange skills via video calls, in-person meetups, or recorded videos. Choose what works best for your schedule.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon" style="background:#059669">📅</div>
+          <h3>Schedule Sessions</h3>
+          <p>Book sessions at times that work for both of you. Set agendas, share materials, and track your learning progress.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon" style="background:#D97706">⭐</div>
+          <h3>Build Reputation</h3>
+          <p>Rate your experiences and receive reviews. Build trust in the community and showcase your teaching abilities.</p>
+        </div>
+        <div class="how-card">
+          <div class="how-icon" style="background:#C0392B">🌍</div>
+          <h3>Global Community</h3>
+          <p>Connect with learners and teachers worldwide. Break geographical barriers and access diverse perspectives.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ══ PROFILE ══════════════════════════════════════ -->
+<div id="page-create-profile" class="page">
+  <div class="profile-page">
+    <div class="profile-card">
+      <h2 id="pf-title">Create Your Profile</h2>
+      <p class="sub" id="pf-sub">Tell us about yourself and your skills</p>
+      <label class="avatar-upload" for="av-input">
+        <div class="avatar-circle" id="av-preview">📷</div>
+        <span>Click to upload photo</span>
+      </label>
+      <input type="file" id="av-input" accept="image/*" style="display:none" onchange="previewAv(this)"/>
+      <div class="form-group">
+        <label for="pf-name">Full name</label>
+        <input type="text" id="pf-name" placeholder="Enter your name" autocomplete="name"/>
+      </div>
+      <div class="form-group">
+        <label for="pf-bio">Bio</label>
+        <textarea id="pf-bio" placeholder="Tell others about yourself, your interests, and what you are passionate about …"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Skills I can Teach</label>
+        <div class="skill-input-row">
+          <input type="text" id="teach-in" placeholder="e.g. Python, Guitar…" onkeydown="if(event.key==='Enter')addTag('teach')"/>
+          <button class="add-btn" onclick="addTag('teach')">+ Add</button>
+        </div>
+        <div class="tags-row" id="teach-tags"></div>
+      </div>
+      <div class="form-group">
+        <label>Skills I Want to Learn</label>
+        <div class="skill-input-row">
+          <input type="text" id="learn-in" placeholder="e.g. Spanish, React…" onkeydown="if(event.key==='Enter')addTag('learn')"/>
+          <button class="add-btn" onclick="addTag('learn')">+ Add</button>
+        </div>
+        <div class="tags-row" id="learn-tags"></div>
+      </div>
+
+      <div class="form-group">
+        <label>Preferred Session Type</label>
+        <div class="pref-options">
+          <label class="pref-option">
+            <input type="radio" name="session_pref" id="pref-video"    value="video"     onchange="onPrefChange(this)"/>
+            <span class="pref-icon">🎥</span><span>Video Call</span>
+          </label>
+          <label class="pref-option">
+            <input type="radio" name="session_pref" id="pref-inperson" value="in-person" onchange="onPrefChange(this)"/>
+            <span class="pref-icon">👥</span><span>In-Person</span>
+          </label>
+          <label class="pref-option">
+            <input type="radio" name="session_pref" id="pref-both"     value="both"      onchange="onPrefChange(this)" checked/>
+            <span class="pref-icon">✨</span><span>Both</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="form-group" id="location-group" style="display:none">
+        <label for="pf-location">Your Location <span style="font-weight:400;color:var(--gray);font-size:.82rem">– shown to In-Person matches</span></label>
+        <input type="text" id="pf-location" placeholder="e.g. Helsinki, Finland" autocomplete="address-level2"/>
+      </div>
+
+      <button class="btn-primary" id="pf-save-btn" onclick="saveProfile()">Save Profile &amp; Continue</button>
+
+      <div class="danger-zone">
+        <button class="btn-danger" onclick="deleteAccount()">🗑 Delete My Account</button>
+        <p class="danger-hint">This permanently removes your profile, messages and sessions.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ BROWSE ════════════════════════════════════════ -->
+<div id="page-browse" class="page">
+  <div class="browse-header">
+    <div class="container">
+      <h1>Find Your Match</h1>
+      <p>Discover people who can teach what you want to learn</p>
+      <div class="browse-search">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="browse-q" placeholder="Search by skill or name…" oninput="loadUsers()" onkeydown="if(event.key==='Enter')loadUsers()"/>
+      </div>
+    </div>
+  </div>
+  <div class="filter-row">
+    <div class="container">
+      <div class="filter-pills">
+        <button class="filter-btn active" onclick="setFilter('all',this)">All Matches</button>
+        <button class="filter-btn"        onclick="setFilter('suggested',this)">Suggested</button>
+        <button class="filter-btn"        onclick="setFilter('online',this)">Online Now</button>
+        <button class="filter-btn"        onclick="setFilter('video',this)">Video Calls</button>
+        <button class="filter-btn"        onclick="setFilter('in-person',this)">In-Person</button>
+      </div>
+    </div>
+  </div>
+  <div class="browse-grid">
+    <div class="container">
+      <div class="cards-grid" id="cards-grid">
+        <div class="spinner">Loading…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MESSAGES ══════════════════════════════════════ -->
+<div id="page-messages" class="page msg-page">
+  <div class="msg-sidebar" id="msg-sidebar">
+    <div class="msg-sidebar-header">
+      <h3>Messages</h3>
+      <p style="font-size:.74rem;color:var(--gray);margin-top:4px">Hover a message to delete it.</p>
+    </div>
+    <div id="msg-conv-list">
+      <div style="padding:20px;color:var(--gray);font-size:.88rem">Loading…</div>
+    </div>
+  </div>
+  <div class="msg-main" id="msg-main">
+    <div class="msg-empty">
+      <span style="font-size:2.2rem">💬</span>
+      <span>Select a conversation to start messaging</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SCHEDULE ══════════════════════════════════════ -->
+<div id="page-schedule" class="page">
+  <div class="schedule-page">
+    <div class="schedule-card">
+      <h2>Schedule a Session</h2>
+      <div class="session-info-box">
+        <h3 id="sched-title">Skill Swap</h3>
+        <p style="font-size:.82rem;color:var(--muted);margin-top:4px">Select which skills you will exchange in this session.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="sched-teach-sel">I will teach</label>
+        <select class="duration-sel" id="sched-teach-sel">
+          <option value="">— select a skill —</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sched-learn-sel">I want to learn</label>
+        <select class="duration-sel" id="sched-learn-sel">
+          <option value="">— select a skill —</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sched-date">Select Date</label>
+        <input type="date" class="teal-input" id="sched-date"/>
+      </div>
+      <div class="form-group">
+        <label for="sched-time">Select Time</label>
+        <input type="time" class="teal-input" id="sched-time" value="18:00"/>
+      </div>
+      <div class="form-group">
+        <label>Session Type</label>
+        <div class="session-type-row">
+          <button class="type-btn selected" onclick="selType(this,'video')"><span class="ti">🎥</span>Video Call</button>
+          <button class="type-btn"          onclick="selType(this,'in-person')"><span class="ti">👥</span>In-Person</button>
+          <button class="type-btn"          onclick="selType(this,'recorded')"><span class="ti">🎬</span>Recorded</button>
+        </div>
+      </div>
+
+      <div class="form-group" id="sched-link-group">
+        <label for="sched-call-link">
+          Video Call Link
+          <span style="font-weight:400;color:var(--gray);font-size:.82rem"> – your Zoom / Google Meet / Teams link</span>
+        </label>
+        <input type="url" class="teal-input" id="sched-call-link"
+               placeholder="https://zoom.us/j/... or meet.google.com/..."/>
+        <p style="font-size:.76rem;color:var(--muted);margin-top:6px">
+          The other person will see a "Join Call" button with this link.
+        </p>
+      </div>
+
+      <div class="form-group">
+        <label for="sched-dur">Session Duration</label>
+        <select class="duration-sel" id="sched-dur">
+          <option value="30">30 minutes</option>
+          <option value="45">45 minutes</option>
+          <option value="60" selected>60 minutes</option>
+          <option value="90">90 minutes</option>
+          <option value="120">120 minutes</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="sched-agenda">Agenda / Notes <span style="font-weight:400;color:var(--gray)">(optional)</span></label>
+        <textarea class="agenda-ta" id="sched-agenda" placeholder="What would you like to cover in this session?&#10;&#10;Example:&#10;- Introduction and getting to know each other&#10;- Basic guitar chords (C, G, D, Em)…"></textarea>
+      </div>
+      <button class="btn-primary" onclick="confirmSession()">Send Session Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SESSIONS ══════════════════════════════════════ -->
+<div id="page-sessions" class="page">
+  <div class="sessions-page">
+    <div class="container">
+      <h1>My Sessions</h1>
+      <div id="sessions-list"><div class="spinner">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ADMIN ════════════════════════════════════════ -->
+<div id="page-admin" class="page">
+  <div class="admin-page">
+    <div class="container">
+      <div class="admin-header">
+        <h1>⚙️ Admin Panel</h1>
+        <p>Manage all users — ban, unban, delete accounts or promote admins.</p>
+      </div>
+      <div id="admin-user-list"><div class="spinner">Loading…</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ AUTH MODAL ════════════════════════════════════ -->
+<div class="modal-overlay" id="auth-modal">
+  <div class="modal">
+    <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
+    <div class="modal-tabs">
+      <button class="modal-tab active" id="tab-login"    onclick="switchTab('login')">Sign In</button>
+      <button class="modal-tab"        id="tab-register" onclick="switchTab('register')">Sign Up</button>
+    </div>
+    <div id="login-form">
+      <div class="err-banner" id="login-err"></div>
+      <div class="form-group">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label for="login-pass">Password</label>
+        <input type="password" id="login-pass" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:6px" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="auth-switch">Don't have an account? <a onclick="switchTab('register')">Sign up free</a></div>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="err-banner" id="reg-err"></div>
+      <div class="form-group">
+        <label for="reg-name">Full Name</label>
+        <input type="text" id="reg-name" placeholder="Your name" autocomplete="name"/>
+      </div>
+      <div class="form-group">
+        <label for="reg-email">Email</label>
+        <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"/>
+      </div>
+      <div class="form-group">
+        <label for="reg-pass">Password</label>
+        <input type="password" id="reg-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"/>
+      </div>
+      <button class="btn-primary" style="width:100%;margin-top:6px" id="reg-btn" onclick="doRegister()">Create Account</button>
+      <div class="auth-switch">Already have an account? <a onclick="switchTab('login')">Sign in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PROFILE VIEW MODAL ════════════════════════════ -->
+<div class="modal-overlay" id="pv-modal" onclick="closePVModal(event)">
+  <div class="pv-modal" id="pv-content"></div>
+</div>
+
+<!-- ══ SUCCESS MODAL ═════════════════════════════════ -->
+<div class="modal-overlay" id="success-modal">
+  <div class="modal success-modal">
+    <div class="big-icon" id="sm-icon">🎉</div>
+    <h3 id="sm-title">Done!</h3>
+    <p  id="sm-msg">Success</p>
+    <button class="btn-primary" onclick="closeSuccess()">Continue</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<script src="/static/js/main.js?v=1"></script>
+</body>
+</html>
