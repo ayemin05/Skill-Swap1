@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// ─── Database setup ───────────────────────────────────────────────────────────
+// Database setup
 // I'm using SQLite here because it needs zero setup — it's just a file on disk.
 // No separate database server needed, which makes it easy to run locally.
 
@@ -129,7 +129,7 @@ func initDB() {
 	log.Println("Database is ready")
 }
 
-// ─── Data models ─────────────────────────────────────────────────────────────
+//  Data models
 // These structs define the shape of data going in and out of the API as JSON.
 
 type User struct {
@@ -181,10 +181,8 @@ type Session struct {
 	CreatedAt string `json:"created_at"`
 }
 
-// ─── Auth helpers ─────────────────────────────────────────────────────────────
+// Auth helpers
 
-// generateToken makes a simple unique token from the current timestamp.
-// In production you'd want crypto/rand but this works fine for a project.
 func generateToken() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
 }
@@ -234,7 +232,7 @@ func requireAuth(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return userID, true
 }
 
-// ─── Response helpers ─────────────────────────────────────────────────────────
+//  Response helpers
 
 func jsonOK(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -290,7 +288,7 @@ func loadUser(userID int) (*User, error) {
 	return u, nil
 }
 
-// ─── Route handlers ───────────────────────────────────────────────────────────
+// Route handlers
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -734,7 +732,7 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ─── Avatar upload ────────────────────────────────────────────────────────────
+// Avatar upload
 // The browser sends the photo as a base64 string. We decode it and save it as a
 // .jpg file in static/avatars/. Only the file path is stored in the database.
 
@@ -777,7 +775,7 @@ func handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"url": urlPath})
 }
 
-// ─── Admin handlers ───────────────────────────────────────────────────────────
+//  Admin handlers
 // Admin-only endpoints. requireAdmin checks both authentication and is_admin flag.
 
 func requireAdmin(w http.ResponseWriter, r *http.Request) (int, bool) {
@@ -885,7 +883,7 @@ func handleAdminAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ─── Delete handlers ──────────────────────────────────────────────────────────
+// Delete handlers
 
 func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
@@ -944,7 +942,7 @@ func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"status": "account deleted"})
 }
 
-// ─── Static file server with no-cache headers ─────────────────────────────────
+// Static file server with no-cache headers
 // This wrapper adds Cache-Control: no-cache to every static file response.
 // It prevents browsers (especially Chrome) from serving old JS/CSS after updates.
 
@@ -958,7 +956,7 @@ func noCacheFileServer(root http.FileSystem) http.Handler {
 	})
 }
 
-// ─── Demo bot seeding ─────────────────────────────────────────────────────────
+// Demo bot seeding
 // These two demo accounts are created automatically so the browse page
 // isn't empty when someone runs the project for the first time.
 
@@ -1032,7 +1030,7 @@ func seedBotWelcome(newUserID int) {
 	}
 }
 
-// ─── Server entry point ───────────────────────────────────────────────────────
+// Server entry point
 
 func main() {
 	initDB()
