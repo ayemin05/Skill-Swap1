@@ -181,8 +181,8 @@ type Session struct {
 	CreatedAt string `json:"created_at"`
 }
 
+//TODO: switch to crypto/rant at some point, this works for now
 // Auth helpers
-
 func generateToken() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
 }

@@ -34,6 +34,7 @@ async function api(method, path, body) {
   const data = await res.json();
   // console.log(method, path, data);
   if (!res.ok) throw new Error(data.error || 'Request failed');
+  // TODO: maybe add retry logic here for network failures
   return data;
 }
 
@@ -465,7 +466,7 @@ function closePVModal(e) {
     document.getElementById('pv-modal').classList.remove('show');
 }
 
-// Messages
+// Messages & conversations
 function startMessage(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   showPage('messages');
@@ -706,7 +707,7 @@ async function deleteConversation(userId, name) {
   } catch(e) { showToast('Could not delete: ' + e.message); }
 }
 
-// Schedule 
+// Schedule stuff
 async function openSchedule(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   S.scheduleWith = userId;
@@ -1164,5 +1165,4 @@ function onPrefChange(radio) {
   }
 }
 
-//  Boot
 init();
