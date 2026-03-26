@@ -27,22 +27,22 @@ const S = {
 const COLORS = ['#7986CB','#26A69A','#EF5350','#66BB6A','#FFA726','#AB47BC','#5C6BC0','#00897B'];
 
 // API helper
-// All API calls go through here. It adds JSON headers and throws on error responses.
 async function api(method, path, body) {
   const opts = { method, headers: {'Content-Type': 'application/json'}, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
   const res  = await fetch(path, opts);
   const data = await res.json();
+  // console.log(method, path, data);
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
 
 // App startup 
-// On load: check if there's a valid session cookie and restore the logged-in state.
 async function init() {
   try {
     S.user = await api('GET', '/api/me');
     onLoggedIn();
+    console.log('logged in as', S.user.name);
   } catch { /* no session — guest mode */ }
 
   // Default the schedule date to tomorrow
@@ -54,8 +54,6 @@ async function init() {
 }
 
 // Navigation 
-// showPage hides all page divs and shows the requested one.
-// It also triggers any data loading needed for that page.
 function showPage(pg) {
   if (pg !== 'messages') stopPolling();
 
@@ -221,8 +219,6 @@ async function doLogout() {
 }
 
 // Profile 
-// previewAv: when the user picks a photo, show a preview and upload it to the server right away.
-// Storing the server URL (not base64) means it persists after logout.
 function previewAv(input) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -399,8 +395,6 @@ function renderCards(users) {
 }
 
 // Profile View Modal
-// viewProfile fetches a user and opens a modal with their full profile.
-// When the viewer is an admin, extra management buttons appear at the bottom.
 async function viewProfile(id) {
   try {
     const u        = await api('GET', '/api/users/' + id);
@@ -478,7 +472,6 @@ function startMessage(userId, name) {
   setTimeout(() => openConversation(userId, name), 150);
 }
 
-// refreshUnreadBadge fetches conversations and updates the nav badge with total unread count
 async function refreshUnreadBadge() {
   if (!S.user) return;
   try {
@@ -502,7 +495,6 @@ function updateMsgBadge(count) {
 }
 
 // renderConvList builds the conversation sidebar.
-// Uses string concatenation throughout to avoid Node v22 template literal parsing issues.
 function renderConvList(convs) {
   const list = document.getElementById('msg-conv-list');
   if (!list) return;
@@ -674,6 +666,7 @@ async function fetchMessagesSilent(userId) {
   try {
     const msgs = await api('GET', '/api/messages?with=' + userId);
     const list = msgs || [];
+    // console.log('msg count:', list.length);
     if (list.length !== body.querySelectorAll('.msg-bubble-row').length) {
       renderMessages(list, body);
     }
@@ -684,6 +677,7 @@ async function sendMsg(userId) {
   const input   = document.getElementById('msg-in');
   const content = input.value.trim(); if (!content) return;
   input.value   = '';
+  console.log('sending to', userId);
   try {
     await api('POST', '/api/messages', {receiver_id: userId, content});
     fetchMessages(userId); loadConversations();
@@ -713,7 +707,6 @@ async function deleteConversation(userId, name) {
 }
 
 // Schedule 
-// openSchedule populates the schedule form with both users' skills as dropdowns
 async function openSchedule(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   S.scheduleWith = userId;
@@ -1039,7 +1032,6 @@ async function refreshSessionBadge() {
 }
 
 //  Admin 
-// loadAdminUsers fetches all users and renders the admin panel with stats and action buttons.
 async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
   if (!list) return;
