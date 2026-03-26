@@ -97,7 +97,7 @@ I deliberately chose not to use React, Vue, or any front-end frameworks. The ent
 **Steps:**
 
 ```bash
-cd skillswap-3
+cd Skill-Swap1
 go run main.go
 ```
 
@@ -112,7 +112,7 @@ The database file `skillswap.db` is created automatically on first run. Two demo
 ## Project Structure
 
 ```
-skillswap-3/
+Skill-Swap1/
 ├── main.go              # All backend logic — routes, handlers, database
 ├── skillswap.db         # SQLite database (auto-created on first run)
 ├── go.mod / go.sum      # Go module dependency files
