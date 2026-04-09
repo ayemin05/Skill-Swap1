@@ -25,7 +25,12 @@ var db *sql.DB
 
 func initDB() {
 	var err error
-	db, err = sql.Open("sqlite3", "./skillswap.db")
+	dbPath := "./skillswap.db"
+	if _, statErr := os.Stat("/app/data"); statErr == nil {
+		os.MkdirAll("/app/data", 0755)
+		dbPath = "/app/data/skillswap.db"
+	}
+	db, err = sql.Open("sqlite3", dbPath)
 	if err != nil {
 		log.Fatal("couldn't open the database file:", err)
 	}
