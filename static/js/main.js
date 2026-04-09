@@ -26,6 +26,10 @@ const S = {
 
 const COLORS = ['#7986CB','#26A69A','#EF5350','#66BB6A','#FFA726','#AB47BC','#5C6BC0','#00897B'];
 
+// Browse cache — stores last fetched users so switching back to Browse is instant
+let _usersCache = null;
+let _usersCacheTime = 0;
+
 // ── API helper ───────────────────────────────────────
 // All API calls go through here. It adds JSON headers and throws on error responses.
 async function api(method, path, body) {
@@ -225,6 +229,7 @@ function onLoggedIn() {
 }
 
 async function doLogout() {
+  _usersCache = null; _usersCacheTime = 0;
   try { await api('POST', '/api/logout'); } catch {}
   S.user = null;
   S.activeConv = null;
@@ -317,6 +322,7 @@ async function saveProfile() {
       learn:        S.learnTags,
     });
     S.avatarData = null;
+    _usersCache = null; _usersCacheTime = 0;
     showSuccess('\uD83C\uDF89', 'Profile Saved!', 'Your profile is live, ' + S.user.name + '! Start browsing matches.', () => showPage('browse'));
   } catch(e) { showToast('Error: ' + e.message); }
   finally { btn.disabled = false; btn.textContent = 'Save Profile & Continue'; }
@@ -335,7 +341,14 @@ async function loadUsers() {
   const q    = document.getElementById('browse-q')?.value || '';
   const grid = document.getElementById('cards-grid');
   if (!grid) return;
-  grid.innerHTML = '<div class="spinner">Loading\u2026</div>';
+
+  // Show cached results instantly if available and fresh (within 30 seconds) and no search query
+  if (_usersCache && !q && S.filter === 'all' && Date.now() - _usersCacheTime < 30000) {
+    renderCards(_usersCache);
+  } else {
+    grid.innerHTML = '<div class="spinner">Loading\u2026</div>';
+  }
+
   try {
     const params = new URLSearchParams();
     if (q) params.set('q', q);
@@ -351,6 +364,8 @@ async function loadUsers() {
         (u.learn||[]).some(s => myTeach.includes(s))
       );
     }
+    // Cache the unfiltered results for instant tab switching
+    if (!q && S.filter === 'all') { _usersCache = users; _usersCacheTime = Date.now(); }
     renderCards(users);
   } catch { grid.innerHTML = '<div class="no-results">Could not load users.</div>'; }
 }
@@ -597,14 +612,7 @@ async function openConversation(userId, name) {
   // Fetch partner avatar for topbar
   const color    = COLORS[userId % COLORS.length];
   const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  let topbarAv   = '<div class="card-avatar" style="background:' + color + ';width:40px;height:40px;font-size:.88rem">' + initials + '</div>';
-  try {
-    const tu = await api('GET', '/api/users/' + userId);
-    if (tu.avatar) {
-      topbarAv = '<div class="card-avatar" style="background:' + color + ';width:40px;height:40px;overflow:hidden;padding:0">'
-        + '<img src="' + tu.avatar + '" alt="' + name + '" style="width:100%;height:100%;object-fit:cover"/></div>';
-    }
-  } catch {}
+  let topbarAv = '<div class="card-avatar" style="background:' + color + ';width:40px;height:40px;font-size:.88rem">' + initials + '</div>';
 
   const en   = name.replace(/'/g, "\\'");
   const main = document.getElementById('msg-main');
@@ -627,15 +635,23 @@ async function openConversation(userId, name) {
     + '<button class="msg-send" onclick="sendMsg(' + userId + ')">Send</button>'
     + '</div>';
 
+  // Fetch avatar in background without blocking chat open
+  api('GET', '/api/users/' + userId).then(tu => {
+    if (tu && tu.avatar) {
+      const avEl = document.querySelector('.msg-topbar .card-avatar');
+      if (avEl) avEl.outerHTML = '<div class="card-avatar" style="background:' + color + ';width:40px;height:40px;overflow:hidden;padding:0"><img src="' + tu.avatar + '" alt="' + name + '" style="width:100%;height:100%;object-fit:cover"/></div>';
+    }
+  }).catch(() => {});
+
   await fetchMessages(userId);
   loadConversations();
 
-  // Poll every 2.5s for new messages
+  // Poll every 1s for new messages
   S.pollTimer = setInterval(async () => {
     if (S.activeConv !== userId || S.page !== 'messages') { stopPolling(); return; }
     await fetchMessagesSilent(userId);
     loadConversations();
-  }, 2500);
+  }, 1000);
 }
 
 function stopPolling() {
@@ -716,10 +732,26 @@ async function sendMsg(userId) {
   const input   = document.getElementById('msg-in');
   const content = input.value.trim(); if (!content) return;
   input.value   = '';
+
+  // Show message immediately without waiting for server response
+  const body = document.getElementById('msg-body');
+  if (body) {
+    const temp = document.createElement('div');
+    temp.className = 'msg-bubble-row me';
+    temp.id = 'msg-sending-temp';
+    temp.innerHTML = '<div class="msg-bubble me">' + content + '<div class="msg-time" style="opacity:.6">sending…</div></div>';
+    body.appendChild(temp);
+    body.scrollTop = body.scrollHeight;
+  }
+
   try {
     await api('POST', '/api/messages', {receiver_id: userId, content});
     fetchMessages(userId); loadConversations();
-  } catch(e) { showToast('Could not send: ' + e.message); }
+  } catch(e) {
+    const temp = document.getElementById('msg-sending-temp');
+    if (temp) temp.remove();
+    showToast('Could not send: ' + e.message);
+  }
 }
 
 async function deleteMessage(msgId) {
