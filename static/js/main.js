@@ -175,7 +175,7 @@ function onGetStarted() {
   else         showPage('create-profile');
 }
 
-// Auth 
+// Auth
 function openAuthModal(tab) {
   switchTab(tab || 'login');
   const modal = document.getElementById('auth-modal');
@@ -259,7 +259,7 @@ function showMsgNotification(senderName, content) {
       body: content.length > 80 ? content.slice(0, 80) + '…' : content,
       icon: '/static/avatars/user-3.jpg'
     });
-    n.onclick = () => { window.focus(); showPage('messages'); n.close(); };
+    n.onclick = () => { window.focus(); showPage('sessions'); n.close(); };
   }
 }
 
@@ -285,7 +285,7 @@ async function doLogout() {
   showToast('Logged out. See you soon!');
 }
 
-// Profile 
+// Profile
 // previewAv: when the user picks a photo, show a preview and upload it to the server right away.
 // Storing the server URL (not base64) means it persists after logout.
 function previewAv(input) {
@@ -365,7 +365,7 @@ async function saveProfile() {
   finally { btn.disabled = false; btn.textContent = 'Save Profile & Continue'; }
 }
 
-// Browse 
+// Browse
 function setFilter(f, btn) {
   S.filter = f;
   document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
@@ -849,7 +849,7 @@ async function deleteConversation(userId, name) {
   } catch(e) { showToast('Could not delete: ' + e.message); }
 }
 
-// Schedule 
+// Schedule
 // openSchedule populates the schedule form with both users' skills as dropdowns
 async function openSchedule(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
@@ -919,7 +919,7 @@ async function confirmSession() {
   finally { btn.disabled = false; btn.textContent = 'Send Session Request'; }
 }
 
-// Sessions list 
+// Sessions list
 async function loadSessions() {
   const list = document.getElementById('sessions-list');
   if (!list) return;
@@ -1097,7 +1097,7 @@ function renderSessionCard(s) {
     + '</div>';
 }
 
-// Star rating 
+// Star rating
 function hoverStars(sessionId, n) {
   const picker   = document.getElementById('stars-' + sessionId);
   if (!picker) return;
@@ -1218,23 +1218,30 @@ function startSessionPolling() {
       _sessionsCache = sessions;
       _sessionsCacheTime = Date.now();
 
-      // Check for status changes since last poll
+      // Check for new sessions or status changes since last poll
+      let somethingChanged = false;
       sessions.forEach(s => {
         const prev = _lastSessionStates[s.id];
-        if (prev && prev !== s.status) {
+        if (!prev || prev !== s.status) {
+          somethingChanged = true;
           const otherName = s.requester_id === S.user.id ? s.partner_name : s.requester_name;
-          if (s.status === 'confirmed') {
+          if (!prev && s.status === 'pending' && s.partner_id === S.user.id) {
+            showMsgNotification('Skill Swap', (s.requester_name || 'Someone') + ' sent you a session request!');
+          } else if (prev && s.status === 'confirmed') {
             showMsgNotification('Skill Swap', otherName + ' confirmed your session request!');
-          } else if (s.status === 'declined') {
+          } else if (prev && s.status === 'declined') {
             showMsgNotification('Skill Swap', otherName + ' declined your session request.');
-          } else if (s.status === 'cancelled') {
+          } else if (prev && s.status === 'cancelled') {
             showMsgNotification('Skill Swap', otherName + ' cancelled the session.');
           }
-          // Refresh UI immediately if on sessions page
-          if (S.page === 'sessions') renderSessions(sessions);
         }
         _lastSessionStates[s.id] = s.status;
       });
+
+      // Refresh sessions page immediately if anything changed
+      if (somethingChanged && S.page === 'sessions') {
+        renderSessions(sessions);
+      }
 
       const pending = sessions.filter(s => s.status === 'pending' && s.partner_id === S.user.id).length;
       updateSessionBadge(pending);
@@ -1246,7 +1253,7 @@ function stopSessionPolling() {
   if (_sessionBadgeTimer) { clearInterval(_sessionBadgeTimer); _sessionBadgeTimer = null; }
 }
 
-// Admin 
+// Admin
 // loadAdminUsers fetches all users and renders the admin panel with stats and action buttons.
 async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
@@ -1379,8 +1386,8 @@ async function deleteAccount() {
   } catch(e) { showToast('Could not delete account: ' + e.message); }
 }
 
-// Modals & Toast 
-// Forgot Password 
+// Modals & Toast
+// Forgot Password
 function openForgotModal() {
   const err = document.getElementById('forgot-err');
   if (err) err.classList.remove('show');
@@ -1438,7 +1445,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Session preference 
+// Session preference
 // Show/hide the location field depending on session preference selection
 function onPrefChange(radio) {
   const locGroup = document.getElementById('location-group');
@@ -1447,8 +1454,8 @@ function onPrefChange(radio) {
   }
 }
 
-// Boot 
-// Password Reset 
+// Boot
+// Password Reset
 async function submitResetPassword() {
   const pass  = document.getElementById('reset-pass').value;
   const pass2 = document.getElementById('reset-pass2').value;
