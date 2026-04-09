@@ -226,6 +226,23 @@ function onLoggedIn() {
   refreshSessionBadge();
   const heroCta = document.getElementById('hero-cta-btn');
   if (heroCta) heroCta.textContent = 'Edit Profile';
+  requestNotifPermission();
+}
+
+function requestNotifPermission() {
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
+}
+
+function showMsgNotification(senderName, content) {
+  if ('Notification' in window && Notification.permission === 'granted' && document.hidden) {
+    const n = new Notification(senderName + ' sent you a message', {
+      body: content.length > 80 ? content.slice(0, 80) + '…' : content,
+      icon: '/static/avatars/user-3.jpg'
+    });
+    n.onclick = () => { window.focus(); showPage('messages'); n.close(); };
+  }
 }
 
 async function doLogout() {
@@ -675,7 +692,9 @@ function renderMessages(msgs, body) {
     const tick = isMe
       ? (m.is_read
           ? '<span style="color:#5DCAA5;font-size:.65rem;margin-left:3px">&#10003;&#10003;</span>'
-          : '<span style="color:rgba(255,255,255,.45);font-size:.65rem;margin-left:3px">&#10003;</span>')
+          : m.is_delivered
+            ? '<span style="color:rgba(255,255,255,.65);font-size:.65rem;margin-left:3px">&#10003;&#10003;</span>'
+            : '<span style="color:rgba(255,255,255,.45);font-size:.65rem;margin-left:3px">&#10003;</span>')
       : '';
     return '<div class="msg-bubble-row ' + (isMe ? 'me' : '') + '" data-msg-id="' + m.id + '"'
       + ' ondblclick="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ')"'
@@ -727,8 +746,28 @@ async function fetchMessagesSilent(userId) {
   try {
     const msgs = await api('GET', '/api/messages?with=' + userId);
     const list = msgs || [];
-    if (list.length !== body.querySelectorAll('.msg-bubble-row').length) {
+    const currentRows = body.querySelectorAll('.msg-bubble-row');
+    // Re-render if message count changed OR if read/delivered status changed
+    const statusChanged = list.some((m, i) => {
+      if (m.sender_id !== S.user.id) return false;
+      const row = currentRows[i];
+      if (!row) return false;
+      const hasGreenTick  = !!row.querySelector('span[style*="5DCAA5"]');
+      const hasDoubleTick = row.querySelectorAll('span').length > 0 &&
+                            row.querySelector('.msg-time').textContent.includes('\u2713\u2713');
+      return (m.is_read && !hasGreenTick) || (m.is_delivered && !hasDoubleTick && !hasGreenTick);
+    });
+    if (list.length !== currentRows.length || statusChanged) {
       renderMessages(list, body);
+    }
+    // Show browser notification for new incoming messages when tab is hidden
+    if (list.length > currentRows.length) {
+      const newMsgs = list.slice(currentRows.length);
+      newMsgs.forEach(m => {
+        if (m.sender_id !== S.user.id && document.hidden) {
+          showMsgNotification(m.sender_name || 'Someone', m.content);
+        }
+      });
     }
   } catch {}
 }

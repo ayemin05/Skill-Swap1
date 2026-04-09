@@ -25,12 +25,7 @@ var db *sql.DB
 
 func initDB() {
 	var err error
-	dbPath := "./skillswap.db"
-	if _, statErr := os.Stat("/app/data"); statErr == nil {
-		os.MkdirAll("/app/data", 0755)
-		dbPath = "/app/data/skillswap.db"
-	}
-	db, err = sql.Open("sqlite3", dbPath)
+	db, err = sql.Open("sqlite3", "./skillswap.db")
 	if err != nil {
 		log.Fatal("couldn't open the database file:", err)
 	}
@@ -156,13 +151,14 @@ type User struct {
 }
 
 type Message struct {
-	ID         int    `json:"id"`
-	SenderID   int    `json:"sender_id"`
-	ReceiverID int    `json:"receiver_id"`
-	Content    string `json:"content"`
-	CreatedAt  string `json:"created_at"`
-	SenderName string `json:"sender_name"`
-	IsRead     bool   `json:"is_read"`
+	ID          int    `json:"id"`
+	SenderID    int    `json:"sender_id"`
+	ReceiverID  int    `json:"receiver_id"`
+	Content     string `json:"content"`
+	CreatedAt   string `json:"created_at"`
+	SenderName  string `json:"sender_name"`
+	IsRead      bool   `json:"is_read"`
+	IsDelivered bool   `json:"is_delivered"`
 }
 
 type Session struct {
@@ -521,19 +517,29 @@ func handleMessages(w http.ResponseWriter, r *http.Request) {
 		if msgs == nil {
 			msgs = []Message{}
 		}
-		// Check if the other person has read each of our messages
+
+		// Check delivered (receiver is online) and read (receiver opened this conversation)
 		var lastRead time.Time
 		db.QueryRow("SELECT last_read FROM message_reads WHERE user_id=? AND other_id=?",
 			withID, userID).Scan(&lastRead)
+		var onlineCount int
+		db.QueryRow(`SELECT COUNT(*) FROM auth_tokens
+			WHERE user_id=? AND expires_at>? AND last_used>?`,
+			withID, time.Now(), time.Now().Add(-10*time.Minute)).Scan(&onlineCount)
+		receiverOnline := onlineCount > 0
 		for i := range msgs {
-			if msgs[i].SenderID == userID && !lastRead.IsZero() {
-				msgTime, err := time.Parse("2006-01-02T15:04:05Z", msgs[i].CreatedAt)
-				if err != nil {
-					msgTime, _ = time.Parse("2006-01-02 15:04:05", msgs[i].CreatedAt)
+			if msgs[i].SenderID == userID {
+				msgs[i].IsDelivered = receiverOnline || !lastRead.IsZero()
+				if !lastRead.IsZero() {
+					msgTime, err := time.Parse("2006-01-02T15:04:05Z", msgs[i].CreatedAt)
+					if err != nil {
+						msgTime, _ = time.Parse("2006-01-02 15:04:05", msgs[i].CreatedAt)
+					}
+					msgs[i].IsRead = lastRead.After(msgTime)
 				}
-				msgs[i].IsRead = lastRead.After(msgTime)
 			}
 		}
+
 		// Mark conversation as read — upsert into message_reads
 		if withID > 0 {
 			db.Exec(`INSERT INTO message_reads(user_id, other_id, last_read) VALUES(?,?,?)
