@@ -22,6 +22,7 @@ const S = {
   avatarData:   null,   // temporarily holds a new avatar URL before saving
   pollTimer:    null,   // interval ID for chat polling
   sidebarTimer: null,   // interval ID for sidebar refresh
+  resetToken:   null,   // password reset token from URL
 };
 
 const COLORS = ['#7986CB','#26A69A','#EF5350','#66BB6A','#FFA726','#AB47BC','#5C6BC0','#00897B'];
@@ -44,6 +45,15 @@ async function api(method, path, body) {
 // ── App startup ──────────────────────────────────────
 // On load: check if there's a valid session cookie and restore the logged-in state.
 async function init() {
+  // Check if this is a password reset link
+  const urlParams = new URLSearchParams(window.location.search);
+  const resetToken = urlParams.get('token');
+  if (resetToken) {
+    S.resetToken = resetToken;
+    showPage('reset');
+    return;
+  }
+
   try {
     S.user = await api('GET', '/api/me');
     onLoggedIn();
@@ -1314,13 +1324,11 @@ async function submitForgot() {
   btn.disabled = true; btn.textContent = 'Sending\u2026';
   try {
     await api('POST', '/api/forgot-password', {email});
-    closeForgotModal();
-    showToast('\uD83D\uDCE7 Reset link sent! Check your inbox.');
-  } catch(e) {
-    // Show success either way so we don't reveal which emails are registered
-    closeForgotModal();
-    showToast('\uD83D\uDCE7 If that email exists, a reset link has been sent.');
-  } finally { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+  } catch {}
+  // Always show success so we don't reveal which emails are registered
+  closeForgotModal();
+  showToast('\uD83D\uDCE7 If that email is registered, a reset link has been sent!');
+  btn.disabled = false; btn.textContent = 'Send Reset Link';
 }
 
 // ── Admin user search (client-side filter) ────────────
@@ -1359,4 +1367,30 @@ function onPrefChange(radio) {
 }
 
 // ── Boot ─────────────────────────────────────────────
+// ── Password Reset ────────────────────────────────────
+async function submitResetPassword() {
+  const pass  = document.getElementById('reset-pass').value;
+  const pass2 = document.getElementById('reset-pass2').value;
+  const err   = document.getElementById('reset-err');
+  const btn   = document.getElementById('reset-btn');
+  err.classList.remove('show');
+  if (!pass || pass.length < 6) { err.textContent = 'Password must be at least 6 characters'; err.classList.add('show'); return; }
+  if (pass !== pass2) { err.textContent = 'Passwords do not match'; err.classList.add('show'); return; }
+  if (!S.resetToken) { err.textContent = 'Invalid reset link'; err.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Saving\u2026';
+  try {
+    await api('POST', '/api/reset-password', {token: S.resetToken, password: pass});
+    S.resetToken = null;
+    // Clean the token from the URL
+    window.history.replaceState({}, document.title, '/');
+    showToast('\u2713 Password updated! Please sign in with your new password.');
+    showPage('home');
+    setTimeout(() => openAuthModal('login'), 600);
+  } catch(e) {
+    err.textContent = e.message;
+    err.classList.add('show');
+  }
+  finally { btn.disabled = false; btn.textContent = 'Set New Password'; }
+}
+
 init();

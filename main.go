@@ -1,8 +1,11 @@
 package main
 
 import (
+	"bytes"
+	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -93,6 +96,13 @@ func initDB() {
         other_id INTEGER NOT NULL,
         last_read DATETIME DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY(user_id, other_id),
+        FOREIGN KEY(user_id) REFERENCES users(id)
+    );
+
+    CREATE TABLE IF NOT EXISTS reset_tokens (
+        token      TEXT     PRIMARY KEY,
+        user_id    INTEGER  NOT NULL,
+        expires_at DATETIME NOT NULL,
         FOREIGN KEY(user_id) REFERENCES users(id)
     );
     `
@@ -1157,6 +1167,146 @@ func seedBotWelcome(newUserID int) {
 	}
 }
 
+// ─── Password Reset ───────────────────────────────────────────────────────────
+// generateSecureToken creates a cryptographically random hex token
+func generateSecureToken() string {
+	b := make([]byte, 32)
+	rand.Read(b)
+	return hex.EncodeToString(b)
+}
+
+// sendResetEmail sends a password reset email via Resend API
+func sendResetEmail(toEmail, resetURL string) error {
+	apiKey := os.Getenv("RESEND_API_KEY")
+	if apiKey == "" {
+		return fmt.Errorf("RESEND_API_KEY not set")
+	}
+
+	htmlBody := `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
+		<h2 style="color:#C0392B;font-family:Georgia,serif">Skill Swap</h2>
+		<p>Hi! You requested a password reset.</p>
+		<p>Click the button below to set a new password. This link expires in 1 hour.</p>
+		<a href="` + resetURL + `" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;margin:16px 0">Reset Password</a>
+		<p style="color:#6B7280;font-size:.85rem">If you did not request this, you can safely ignore this email.</p>
+	</div>`
+
+	payload := map[string]interface{}{
+		"from":    "Skill Swap <onboarding@resend.dev>",
+		"to":      []string{toEmail},
+		"subject": "Reset your Skill Swap password",
+		"html":    htmlBody,
+	}
+	body, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", "https://api.resend.com/emails", bytes.NewBuffer(body))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 400 {
+		return fmt.Errorf("resend API returned %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func handleForgotPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		Email string `json:"email"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+	email := strings.ToLower(strings.TrimSpace(body.Email))
+	if email == "" {
+		jsonError(w, "Email is required", http.StatusBadRequest)
+		return
+	}
+
+	// Always return success so we don't reveal which emails are registered
+	var userID int
+	err := db.QueryRow("SELECT id FROM users WHERE email=?", email).Scan(&userID)
+	if err != nil {
+		jsonOK(w, map[string]string{"status": "ok"})
+		return
+	}
+
+	// Delete any existing reset tokens for this user
+	db.Exec("DELETE FROM reset_tokens WHERE user_id=?", userID)
+
+	// Generate token and save
+	token := generateSecureToken()
+	expires := time.Now().Add(1 * time.Hour)
+	db.Exec("INSERT INTO reset_tokens (token, user_id, expires_at) VALUES (?, ?, ?)", token, userID, expires)
+
+	// Build reset URL
+	scheme := "https"
+	host := r.Host
+	if host == "" {
+		host = "skill-swap.fly.dev"
+	}
+	resetURL := scheme + "://" + host + "/reset?token=" + token
+
+	// Send email in background so response is instant
+	go func() {
+		if err := sendResetEmail(email, resetURL); err != nil {
+			log.Println("Failed to send reset email:", err)
+		}
+	}()
+
+	jsonOK(w, map[string]string{"status": "ok"})
+}
+
+func handleResetPassword(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		jsonError(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	json.NewDecoder(r.Body).Decode(&body)
+
+	if body.Token == "" || len(body.Password) < 6 {
+		jsonError(w, "Invalid request", http.StatusBadRequest)
+		return
+	}
+
+	var userID int
+	var expiresAt time.Time
+	err := db.QueryRow("SELECT user_id, expires_at FROM reset_tokens WHERE token=?", body.Token).
+		Scan(&userID, &expiresAt)
+	if err != nil {
+		jsonError(w, "Invalid or expired reset link", http.StatusBadRequest)
+		return
+	}
+	if time.Now().After(expiresAt) {
+		db.Exec("DELETE FROM reset_tokens WHERE token=?", body.Token)
+		jsonError(w, "This reset link has expired. Please request a new one.", http.StatusBadRequest)
+		return
+	}
+
+	// Update password
+	hash, _ := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
+	db.Exec("UPDATE users SET password=? WHERE id=?", string(hash), userID)
+
+	// Delete token and all existing sessions so they must log in again
+	db.Exec("DELETE FROM reset_tokens WHERE token=?", body.Token)
+	db.Exec("DELETE FROM auth_tokens WHERE user_id=?", userID)
+
+	jsonOK(w, map[string]string{"status": "ok"})
+}
+
 // ─── Server entry point ───────────────────────────────────────────────────────
 
 func main() {
@@ -1184,6 +1334,8 @@ func main() {
 	http.HandleFunc("/api/sessions", handleSessions)
 	http.HandleFunc("/api/sessions/", handleSessionAction)
 	http.HandleFunc("/api/account", handleDeleteAccount)
+	http.HandleFunc("/api/forgot-password", handleForgotPassword)
+	http.HandleFunc("/api/reset-password", handleResetPassword)
 	http.HandleFunc("/api/admin/users", handleAdminUsers)
 	http.HandleFunc("/api/admin/action", handleAdminAction)
 

@@ -319,6 +319,28 @@
   </div>
 </div>
 
+<!-- ══ RESET PASSWORD PAGE ══════════════════════════ -->
+<div id="page-reset" class="page">
+  <div class="profile-page">
+    <div class="profile-card">
+      <h2 id="reset-title" style="font-family:var(--serif);font-size:2rem;text-align:center;margin-bottom:4px">Reset Password</h2>
+      <p class="sub" id="reset-sub">Enter your new password below.</p>
+      <div class="err-banner" id="reset-err"></div>
+      <div id="reset-form-wrap">
+        <div class="form-group">
+          <label for="reset-pass">New password</label>
+          <input type="password" id="reset-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitResetPassword()"/>
+        </div>
+        <div class="form-group">
+          <label for="reset-pass2">Confirm new password</label>
+          <input type="password" id="reset-pass2" placeholder="Repeat your new password" autocomplete="new-password" onkeydown="if(event.key==='Enter')submitResetPassword()"/>
+        </div>
+        <button class="btn-primary" style="width:100%;margin-top:6px" id="reset-btn" onclick="submitResetPassword()">Set New Password</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ AUTH MODAL ════════════════════════════════════ -->
 <div class="modal-overlay" id="auth-modal">
   <div class="modal">
