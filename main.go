@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-// Database setup
+// ─── Database setup ───────────────────────────────────────────────────────────
 // I'm using SQLite here because it needs zero setup — it's just a file on disk.
 // No separate database server needed, which makes it easy to run locally.
 
@@ -129,7 +129,7 @@ func initDB() {
 	log.Println("Database is ready")
 }
 
-//  Data models
+// ─── Data models ─────────────────────────────────────────────────────────────
 // These structs define the shape of data going in and out of the API as JSON.
 
 type User struct {
@@ -181,8 +181,10 @@ type Session struct {
 	CreatedAt string `json:"created_at"`
 }
 
-//TODO: switch to crypto/rant at some point, this works for now
-// Auth helpers
+// ─── Auth helpers ─────────────────────────────────────────────────────────────
+
+// generateToken makes a simple unique token from the current timestamp.
+// In production you'd want crypto/rand but this works fine for a project.
 func generateToken() string {
 	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
 }
@@ -232,7 +234,7 @@ func requireAuth(w http.ResponseWriter, r *http.Request) (int, bool) {
 	return userID, true
 }
 
-//  Response helpers
+// ─── Response helpers ─────────────────────────────────────────────────────────
 
 func jsonOK(w http.ResponseWriter, data interface{}) {
 	w.Header().Set("Content-Type", "application/json")
@@ -283,12 +285,16 @@ func loadUser(userID int) (*User, error) {
 			}
 		}
 	}
-	if u.Teach == nil { u.Teach = []string{} }
-	if u.Learn == nil { u.Learn = []string{} }
+	if u.Teach == nil {
+		u.Teach = []string{}
+	}
+	if u.Learn == nil {
+		u.Learn = []string{}
+	}
 	return u, nil
 }
 
-// Route handlers
+// ─── Route handlers ───────────────────────────────────────────────────────────
 
 func handleRegister(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -378,7 +384,9 @@ func handleLogout(w http.ResponseWriter, r *http.Request) {
 
 func handleMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 	u, _ := loadUser(userID)
 	jsonOK(w, u)
 }
@@ -389,7 +397,9 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	var body struct {
 		Name        string   `json:"name"`
@@ -401,7 +411,9 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		Learn       []string `json:"learn"`
 	}
 	json.NewDecoder(r.Body).Decode(&body)
-	if body.SessionPref == "" { body.SessionPref = "both" }
+	if body.SessionPref == "" {
+		body.SessionPref = "both"
+	}
 
 	db.Exec("UPDATE users SET name=?, bio=?, avatar=?, location=?, session_pref=? WHERE id=?",
 		body.Name, body.Bio, body.Avatar, body.Location, body.SessionPref, userID)
@@ -423,11 +435,11 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 // Banned users are always hidden from everyone.
 func handleUsers(w http.ResponseWriter, r *http.Request) {
 	loggedInUserID, _ := getUserFromToken(r)
-	q      := r.URL.Query().Get("q")
+	q := r.URL.Query().Get("q")
 	filter := r.URL.Query().Get("filter")
 
 	query := "SELECT id FROM users WHERE (? = 0 OR id != ?) AND COALESCE(is_banned,0)=0"
-	args  := []interface{}{loggedInUserID, loggedInUserID}
+	args := []interface{}{loggedInUserID, loggedInUserID}
 
 	if q != "" {
 		query += " AND (name LIKE ? OR id IN (SELECT user_id FROM skills WHERE skill LIKE ?))"
@@ -443,7 +455,9 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := db.Query(query, args...)
-	if err != nil { return }
+	if err != nil {
+		return
+	}
 	defer rows.Close()
 
 	var users []*User
@@ -456,7 +470,9 @@ func handleUsers(w http.ResponseWriter, r *http.Request) {
 			users = append(users, u)
 		}
 	}
-	if users == nil { users = []*User{} }
+	if users == nil {
+		users = []*User{}
+	}
 	jsonOK(w, users)
 }
 
@@ -464,7 +480,10 @@ func handleUserByID(w http.ResponseWriter, r *http.Request) {
 	parts := strings.Split(r.URL.Path, "/")
 	id, _ := strconv.Atoi(parts[len(parts)-1])
 	u, err := loadUser(id)
-	if err != nil { jsonError(w, "User not found", 404); return }
+	if err != nil {
+		jsonError(w, "User not found", 404)
+		return
+	}
 	u.Email = ""
 	jsonOK(w, u)
 }
@@ -473,7 +492,9 @@ func handleUserByID(w http.ResponseWriter, r *http.Request) {
 // On GET it also marks the conversation as read by updating message_reads.
 func handleMessages(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	if r.Method == http.MethodGet {
 		withID, _ := strconv.Atoi(r.URL.Query().Get("with"))
@@ -491,7 +512,9 @@ func handleMessages(w http.ResponseWriter, r *http.Request) {
 			rows.Scan(&m.ID, &m.SenderID, &m.ReceiverID, &m.Content, &m.CreatedAt, &m.SenderName)
 			msgs = append(msgs, m)
 		}
-		if msgs == nil { msgs = []Message{} }
+		if msgs == nil {
+			msgs = []Message{}
+		}
 
 		// Mark conversation as read — upsert into message_reads
 		if withID > 0 {
@@ -517,7 +540,9 @@ func handleMessages(w http.ResponseWriter, r *http.Request) {
 // Unread = messages from the other person that arrived after I last read this conversation.
 func handleConversations(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	rows, _ := db.Query(`
 		SELECT DISTINCT
@@ -541,7 +566,9 @@ func handleConversations(w http.ResponseWriter, r *http.Request) {
 		rows.Scan(&otherID, &lastAt)
 
 		u, _ := loadUser(otherID)
-		if u == nil { continue }
+		if u == nil {
+			continue
+		}
 
 		var lastMsg string
 		db.QueryRow(`SELECT content FROM messages
@@ -567,13 +594,17 @@ func handleConversations(w http.ResponseWriter, r *http.Request) {
 		u.Email = ""
 		convs = append(convs, Conv{User: u, LastMsg: lastMsg, LastAt: lastAt, Unread: unread})
 	}
-	if convs == nil { convs = []Conv{} }
+	if convs == nil {
+		convs = []Conv{}
+	}
 	jsonOK(w, convs)
 }
 
 func handleSessions(w http.ResponseWriter, r *http.Request) {
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	if r.Method == http.MethodGet {
 		// Join on both partner and requester so we get both names
@@ -603,7 +634,9 @@ func handleSessions(w http.ResponseWriter, r *http.Request) {
 				&s.CallLink, &s.CreatedAt)
 			sessions = append(sessions, s)
 		}
-		if sessions == nil { sessions = []Session{} }
+		if sessions == nil {
+			sessions = []Session{}
+		}
 		jsonOK(w, sessions)
 
 	} else if r.Method == http.MethodPost {
@@ -626,7 +659,9 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	var body struct {
 		Action   string `json:"action"`
@@ -645,26 +680,41 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 	var status string
 	err := db.QueryRow("SELECT requester_id, partner_id, status FROM sessions WHERE id=?", sessionID).
 		Scan(&reqID, &partID, &status)
-	if err != nil { jsonError(w, "Session not found", 404); return }
-	if userID != reqID && userID != partID { jsonError(w, "This is not your session", 403); return }
+	if err != nil {
+		jsonError(w, "Session not found", 404)
+		return
+	}
+	if userID != reqID && userID != partID {
+		jsonError(w, "This is not your session", 403)
+		return
+	}
 
 	isRequester := userID == reqID
 
 	switch body.Action {
 	case "confirm":
-		if isRequester { jsonError(w, "Only the other person can confirm", 403); return }
+		if isRequester {
+			jsonError(w, "Only the other person can confirm", 403)
+			return
+		}
 		db.Exec("UPDATE sessions SET status='confirmed' WHERE id=?", sessionID)
 		// Increment swap count for both people when they confirm
 		db.Exec("UPDATE users SET swaps=swaps+1 WHERE id=? OR id=?", reqID, partID)
 		jsonOK(w, map[string]string{"status": "confirmed"})
 
 	case "decline":
-		if isRequester { jsonError(w, "Only the other person can decline", 403); return }
+		if isRequester {
+			jsonError(w, "Only the other person can decline", 403)
+			return
+		}
 		db.Exec("UPDATE sessions SET status='declined' WHERE id=?", sessionID)
 		jsonOK(w, map[string]string{"status": "declined"})
 
 	case "cancel":
-		if !isRequester { jsonError(w, "Only the person who sent the request can cancel", 403); return }
+		if !isRequester {
+			jsonError(w, "Only the person who sent the request can cancel", 403)
+			return
+		}
 		// If it was already confirmed, undo the swap count since the session didn't happen
 		if status == "confirmed" {
 			db.Exec("UPDATE users SET swaps=MAX(0,swaps-1) WHERE id=? OR id=?", reqID, partID)
@@ -674,7 +724,8 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 
 	case "reschedule":
 		if body.Date == "" || body.Time == "" {
-			jsonError(w, "Please provide a new date and time", 400); return
+			jsonError(w, "Please provide a new date and time", 400)
+			return
 		}
 		// Both sides can suggest a new time — resets to pending so the other person re-confirms
 		db.Exec("UPDATE sessions SET date=?, time=?, status='pending' WHERE id=?",
@@ -687,27 +738,39 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 	case "add_recording":
 		// For "Recorded" type sessions — the user pastes a recording link after the session.
 		// This is stored permanently in call_link so both people can access it any time.
-		if body.CallLink == "" { jsonError(w, "Please provide a recording link", 400); return }
+		if body.CallLink == "" {
+			jsonError(w, "Please provide a recording link", 400)
+			return
+		}
 		db.Exec("UPDATE sessions SET call_link=? WHERE id=?", body.CallLink, sessionID)
 		jsonOK(w, map[string]string{"status": "recording saved"})
 
 	case "rate":
-		if status != "confirmed" { jsonError(w, "You can only rate completed sessions", 400); return }
-		if body.Stars < 1 || body.Stars > 5 { jsonError(w, "Stars must be between 1 and 5", 400); return }
+		if status != "confirmed" {
+			jsonError(w, "You can only rate completed sessions", 400)
+			return
+		}
+		if body.Stars < 1 || body.Stars > 5 {
+			jsonError(w, "Stars must be between 1 and 5", 400)
+			return
+		}
 
 		// Figure out which column to update and which user is being rated
-		var ratedCol   string
+		var ratedCol string
 		var ratedUserID int
 		if isRequester {
-			ratedCol    = "requester_rated"
+			ratedCol = "requester_rated"
 			ratedUserID = partID
 		} else {
-			ratedCol    = "partner_rated"
+			ratedCol = "partner_rated"
 			ratedUserID = reqID
 		}
 		var alreadyRated int
 		db.QueryRow("SELECT "+ratedCol+" FROM sessions WHERE id=?", sessionID).Scan(&alreadyRated)
-		if alreadyRated > 0 { jsonError(w, "You already rated this session", 400); return }
+		if alreadyRated > 0 {
+			jsonError(w, "You already rated this session", 400)
+			return
+		}
 
 		db.Exec("UPDATE sessions SET "+ratedCol+"=? WHERE id=?", body.Stars, sessionID)
 
@@ -732,7 +795,7 @@ func handleSessionAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Avatar upload
+// ─── Avatar upload ────────────────────────────────────────────────────────────
 // The browser sends the photo as a base64 string. We decode it and save it as a
 // .jpg file in static/avatars/. Only the file path is stored in the database.
 
@@ -742,7 +805,9 @@ func handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	var body struct {
 		Data string `json:"data"` // base64 data URL like "data:image/jpeg;base64,..."
@@ -758,8 +823,14 @@ func handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 		raw = raw[idx+1:]
 	}
 	imgBytes, err := base64.StdEncoding.DecodeString(raw)
-	if err != nil { jsonError(w, "Could not decode image", http.StatusBadRequest); return }
-	if len(imgBytes) > 5*1024*1024 { jsonError(w, "Image too large (max 5MB)", http.StatusBadRequest); return }
+	if err != nil {
+		jsonError(w, "Could not decode image", http.StatusBadRequest)
+		return
+	}
+	if len(imgBytes) > 5*1024*1024 {
+		jsonError(w, "Image too large (max 5MB)", http.StatusBadRequest)
+		return
+	}
 
 	// Save the file as user-{id}.jpg, overwriting any previous photo
 	avatarDir := filepath.Join(".", "static", "avatars")
@@ -775,12 +846,14 @@ func handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 	jsonOK(w, map[string]string{"url": urlPath})
 }
 
-//  Admin handlers
+// ─── Admin handlers ───────────────────────────────────────────────────────────
 // Admin-only endpoints. requireAdmin checks both authentication and is_admin flag.
 
 func requireAdmin(w http.ResponseWriter, r *http.Request) (int, bool) {
 	userID, ok := requireAuth(w, r)
-	if !ok { return 0, false }
+	if !ok {
+		return 0, false
+	}
 	u, err := loadUser(userID)
 	if err != nil || !u.IsAdmin {
 		jsonError(w, "Admin access required", http.StatusForbidden)
@@ -791,7 +864,9 @@ func requireAdmin(w http.ResponseWriter, r *http.Request) (int, bool) {
 
 func handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 	_, ok := requireAdmin(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	rows, _ := db.Query(`
 		SELECT id, name, email, bio, avatar, swaps, rating,
@@ -818,7 +893,9 @@ func handleAdminUsers(w http.ResponseWriter, r *http.Request) {
 			&u.Swaps, &u.Rating, &u.IsAdmin, &u.IsBanned, &u.CreatedAt)
 		users = append(users, u)
 	}
-	if users == nil { users = []AdminUser{} }
+	if users == nil {
+		users = []AdminUser{}
+	}
 	jsonOK(w, users)
 }
 
@@ -828,7 +905,9 @@ func handleAdminAction(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	adminID, ok := requireAdmin(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	var body struct {
 		Action  string `json:"action"`
@@ -868,10 +947,10 @@ func handleAdminAction(w http.ResponseWriter, r *http.Request) {
 	case "delete":
 		// Delete everything belonging to this user, in dependency order
 		db.Exec("DELETE FROM sessions  WHERE requester_id=? OR partner_id=?", body.UserID, body.UserID)
-		db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?",   body.UserID, body.UserID)
-		db.Exec("DELETE FROM skills    WHERE user_id=?",                       body.UserID)
-		db.Exec("DELETE FROM auth_tokens WHERE user_id=?",                     body.UserID)
-		db.Exec("DELETE FROM users     WHERE id=?",                            body.UserID)
+		db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?", body.UserID, body.UserID)
+		db.Exec("DELETE FROM skills    WHERE user_id=?", body.UserID)
+		db.Exec("DELETE FROM auth_tokens WHERE user_id=?", body.UserID)
+		db.Exec("DELETE FROM users     WHERE id=?", body.UserID)
 		jsonOK(w, map[string]string{"status": "user deleted"})
 
 	case "make_admin":
@@ -883,7 +962,7 @@ func handleAdminAction(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Delete handlers
+// ─── Delete handlers ──────────────────────────────────────────────────────────
 
 func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
@@ -891,16 +970,24 @@ func handleDeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	parts := strings.Split(r.URL.Path, "/")
 	msgID, _ := strconv.Atoi(parts[len(parts)-1])
 
 	// Only allow deleting your own messages
 	result, err := db.Exec("DELETE FROM messages WHERE id = ? AND sender_id = ?", msgID, userID)
-	if err != nil { jsonError(w, "Delete failed", 500); return }
+	if err != nil {
+		jsonError(w, "Delete failed", 500)
+		return
+	}
 	rows, _ := result.RowsAffected()
-	if rows == 0 { jsonError(w, "Message not found or not yours", 404); return }
+	if rows == 0 {
+		jsonError(w, "Message not found or not yours", 404)
+		return
+	}
 	jsonOK(w, map[string]string{"status": "message deleted"})
 }
 
@@ -910,11 +997,16 @@ func handleDeleteConversation(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	parts := strings.Split(r.URL.Path, "/")
 	otherID, _ := strconv.Atoi(parts[len(parts)-1])
-	if otherID == 0 { jsonError(w, "Invalid user ID", http.StatusBadRequest); return }
+	if otherID == 0 {
+		jsonError(w, "Invalid user ID", http.StatusBadRequest)
+		return
+	}
 
 	// Delete all messages between these two users in both directions
 	db.Exec(`DELETE FROM messages WHERE
@@ -930,19 +1022,21 @@ func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	userID, ok := requireAuth(w, r)
-	if !ok { return }
+	if !ok {
+		return
+	}
 
 	// Clean up all data belonging to this user before deleting the user row
 	db.Exec("DELETE FROM sessions  WHERE requester_id=? OR partner_id=?", userID, userID)
-	db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?",   userID, userID)
-	db.Exec("DELETE FROM skills    WHERE user_id=?",                       userID)
-	db.Exec("DELETE FROM auth_tokens WHERE user_id=?",                     userID)
-	db.Exec("DELETE FROM users     WHERE id=?",                            userID)
+	db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?", userID, userID)
+	db.Exec("DELETE FROM skills    WHERE user_id=?", userID)
+	db.Exec("DELETE FROM auth_tokens WHERE user_id=?", userID)
+	db.Exec("DELETE FROM users     WHERE id=?", userID)
 	http.SetCookie(w, &http.Cookie{Name: "session", Value: "", Expires: time.Unix(0, 0), Path: "/"})
 	jsonOK(w, map[string]string{"status": "account deleted"})
 }
 
-// Static file server with no-cache headers
+// ─── Static file server with no-cache headers ─────────────────────────────────
 // This wrapper adds Cache-Control: no-cache to every static file response.
 // It prevents browsers (especially Chrome) from serving old JS/CSS after updates.
 
@@ -950,13 +1044,13 @@ func noCacheFileServer(root http.FileSystem) http.Handler {
 	fs := http.FileServer(root)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		w.Header().Set("Pragma",  "no-cache")
+		w.Header().Set("Pragma", "no-cache")
 		w.Header().Set("Expires", "0")
 		fs.ServeHTTP(w, r)
 	})
 }
 
-// Demo bot seeding
+// ─── Demo bot seeding ─────────────────────────────────────────────────────────
 // These two demo accounts are created automatically so the browse page
 // isn't empty when someone runs the project for the first time.
 
@@ -988,19 +1082,28 @@ func seedDB() {
 	for _, b := range bots {
 		var count int
 		db.QueryRow("SELECT COUNT(*) FROM users WHERE email=?", b.email).Scan(&count)
-		if count > 0 { continue } // skip if already seeded
+		if count > 0 {
+			continue
+		} // skip if already seeded
 
 		hash, _ := bcrypt.GenerateFromPassword([]byte("demo123"), bcrypt.DefaultCost)
 		pref := "both"
-		loc  := ""
-		if b.email == "alex@skillswap.demo"  { pref = "in-person"; loc = "New York, US" }
-		if b.email == "sarah@skillswap.demo" { pref = "video" }
+		loc := ""
+		if b.email == "alex@skillswap.demo" {
+			pref = "in-person"
+			loc = "New York, US"
+		}
+		if b.email == "sarah@skillswap.demo" {
+			pref = "video"
+		}
 
 		res, err := db.Exec(`INSERT INTO users
 			(name, email, password, bio, swaps, rating, location, session_pref)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
 			b.name, b.email, string(hash), b.bio, b.swaps, b.rating, loc, pref)
-		if err != nil { continue }
+		if err != nil {
+			continue
+		}
 
 		botID, _ := res.LastInsertId()
 		for _, s := range b.teach {
@@ -1030,7 +1133,7 @@ func seedBotWelcome(newUserID int) {
 	}
 }
 
-// Server entry point
+// ─── Server entry point ───────────────────────────────────────────────────────
 
 func main() {
 	initDB()
@@ -1042,22 +1145,22 @@ func main() {
 	}
 
 	// Register all API routes
-	http.HandleFunc("/api/register",     handleRegister)
-	http.HandleFunc("/api/login",        handleLogin)
-	http.HandleFunc("/api/logout",       handleLogout)
-	http.HandleFunc("/api/me",           handleMe)
-	http.HandleFunc("/api/profile",      handleUpdateProfile)
-	http.HandleFunc("/api/users",        handleUsers)
-	http.HandleFunc("/api/users/",       handleUserByID)
+	http.HandleFunc("/api/register", handleRegister)
+	http.HandleFunc("/api/login", handleLogin)
+	http.HandleFunc("/api/logout", handleLogout)
+	http.HandleFunc("/api/me", handleMe)
+	http.HandleFunc("/api/profile", handleUpdateProfile)
+	http.HandleFunc("/api/users", handleUsers)
+	http.HandleFunc("/api/users/", handleUserByID)
 	http.HandleFunc("/api/upload-avatar", handleUploadAvatar)
-	http.HandleFunc("/api/messages",     handleMessages)
-	http.HandleFunc("/api/messages/",    handleDeleteMessage)
-	http.HandleFunc("/api/conversations",  handleConversations)
+	http.HandleFunc("/api/messages", handleMessages)
+	http.HandleFunc("/api/messages/", handleDeleteMessage)
+	http.HandleFunc("/api/conversations", handleConversations)
 	http.HandleFunc("/api/conversations/", handleDeleteConversation)
-	http.HandleFunc("/api/sessions",     handleSessions)
-	http.HandleFunc("/api/sessions/",    handleSessionAction)
-	http.HandleFunc("/api/account",      handleDeleteAccount)
-	http.HandleFunc("/api/admin/users",  handleAdminUsers)
+	http.HandleFunc("/api/sessions", handleSessions)
+	http.HandleFunc("/api/sessions/", handleSessionAction)
+	http.HandleFunc("/api/account", handleDeleteAccount)
+	http.HandleFunc("/api/admin/users", handleAdminUsers)
 	http.HandleFunc("/api/admin/action", handleAdminAction)
 
 	// Serve static files (HTML, CSS, JS, avatar images) with no-cache headers

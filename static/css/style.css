@@ -3,7 +3,7 @@
    Colour redesign + full accessibility
    ===================================================== */
 
-/* Design Tokens */
+/* ── Design Tokens ──────────────────────────────── */
 :root {
   /* Brand: warm coral-red for identity / hero only */
   --brand:        #C0392B;
@@ -52,22 +52,22 @@
   --focus: 0 0 0 3px rgba(37,99,235,.45);
 }
 
-/* Reset */
+/* ── Reset ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body { font-family: var(--sans); background: var(--bg-white); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
-/* Focus visible */
+/* ── Focus visible ──────────────────────────────── */
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 
-/* Container */
+/* ── Container ──────────────────────────────────── */
 .container {
   width: 100%; max-width: 1160px;
   margin-left: auto; margin-right: auto;
   padding-left: 48px; padding-right: 48px;
 }
 
-/* Global buttons */
+/* ── Global buttons ─────────────────────────────── */
 /* Primary CTA – blue */
 .btn-primary {
   display: inline-block; background: var(--blue); color: #fff;
@@ -108,7 +108,7 @@ body { font-family: var(--sans); background: var(--bg-white); color: var(--text)
 }
 .btn-ghost:hover { background: #1F2937; transform: translateY(-1px); }
 
-/* Page system */
+/* ── Page system ────────────────────────────────── */
 .page { display: none; }
 .page.active { display: block; animation: fadeUp .22s ease; }
 .page.msg-page.active { display: flex; }
@@ -484,7 +484,7 @@ nav {
 .success-modal p  { color: var(--gray); margin-bottom: 28px; font-size: .9rem; line-height: 1.6; }
 .success-modal .btn-primary { width: 100%; }
 
-/* Toast  */
+/* ── Toast ──────────────────────────────────────── */
 .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 13px 28px; border-radius: 999px; font-size: .88rem; font-weight: 500; z-index: 9999; pointer-events: none; transition: transform .28s ease; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -509,17 +509,64 @@ nav {
   .cards-grid  { grid-template-columns: 1fr; }
   .profile-card, .schedule-card { padding: 30px 22px 40px; }
   .sessions-page { padding: 36px 0; }
-  .msg-page.active  { flex-direction: column; }
-  .msg-sidebar      { width: 100%; max-height: 200px; border-right: none; border-bottom: 1px solid var(--border); }
   .modal    { padding: 32px 24px; }
   .pv-modal { padding: 28px 20px; }
+
+  /* ── Mobile messages: two-screen layout like Messenger ── */
+  .msg-page.active {
+    flex-direction: column;
+    height: calc(100vh - var(--nav-h));
+    overflow: hidden;
+  }
+  .msg-sidebar {
+    width: 100%; flex-shrink: 0;
+    border-right: none; border-bottom: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .msg-main { display: none; flex-direction: column; flex: 1; min-height: 0; overflow: hidden; }
+  .msg-body { flex: 1; min-height: 0; overflow-y: auto; }
+  .msg-footer { flex-shrink: 0; }
+  .msg-topbar { flex-shrink: 0; flex-wrap: wrap; gap: 8px; padding: 12px 16px; }
+  .msg-page.active.conv-open .msg-sidebar { display: none; }
+  .msg-page.active.conv-open .msg-main    { display: flex; width: 100%; }
+  .msg-back-btn { display: inline-flex; }
 }
+/* ── Hamburger button – hidden on desktop ─── */
+.hamburger {
+  display: none; flex-direction: column; justify-content: center; gap: 5px;
+  background: none; border: none; cursor: pointer; padding: 6px; flex-shrink: 0;
+}
+.hamburger span {
+  display: block; width: 24px; height: 2px;
+  background: var(--text); border-radius: 2px; transition: all .2s;
+}
+.hamburger.open span:nth-child(1) { transform: translateY(7px) rotate(45deg); }
+.hamburger.open span:nth-child(2) { opacity: 0; }
+.hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
+
 @media (max-width: 480px) {
   .container, .nav-inner { padding-left: 16px; padding-right: 16px; }
   .hero { padding-left: 16px; padding-right: 16px; }
   .hero h1 { font-size: 1.75rem; }
   .hero-btns .btn-primary, .hero-btns .btn-ghost { width: 260px; max-width: 100%; text-align: center; }
-  .nav-links > a { display: none; }
+
+  /* Hide desktop nav links; show hamburger */
+  .nav-links { display: none; }
+  .hamburger { display: flex; }
+
+  /* Mobile nav dropdown */
+  .nav-links.mobile-open {
+    display: flex; flex-direction: column; align-items: flex-start;
+    position: absolute; top: var(--nav-h); left: 0; right: 0;
+    background: var(--bg-white); padding: 16px 20px 20px;
+    border-bottom: 1px solid var(--border);
+    box-shadow: var(--shadow); z-index: 199; gap: 4px;
+  }
+  .nav-links.mobile-open a { padding: 10px 4px; font-size: 1rem; width: 100%; }
+  .nav-links.mobile-open .nav-btn { margin-top: 8px; width: 100%; text-align: center; padding: 11px 20px; }
+
+  /* Fix messages layout on mobile */
+  .msg-main { flex: 1; overflow-y: auto; }
 }
 
 /* =====================================================
@@ -575,7 +622,7 @@ nav {
 .btn-danger:hover { background: #FEE2E2; }
 .danger-hint { font-size: .76rem; color: var(--gray); margin-top: 8px; }
 
-/* Delete message button */
+/* ── Delete message button ──────────────────────────── */
 .msg-bubble-row { position: relative; }
 .msg-delete-btn {
   display: none;
@@ -593,7 +640,7 @@ nav {
 .msg-bubble-row:not(.me) .msg-delete-btn { left: calc(100% + 6px); right: auto; }
 .msg-delete-btn:hover { background: #DC2626; color: #fff; }
 
-/* Nav unread badge */
+/* ── Nav unread badge ───────────────────────────── */
 .nav-badge {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--brand); color: #fff;
@@ -603,7 +650,7 @@ nav {
   line-height: 1;
 }
 
-/* Online indicator */
+/* ── Online indicator ───────────────────────────── */
 .online-dot {
   display: inline-block;
   width: 8px; height: 8px;
@@ -614,7 +661,7 @@ nav {
   box-shadow: 0 0 0 2px rgba(34,197,94,.25);
 }
 
-/* Sidebar conversation profile button */
+/* ── Sidebar conversation profile button ─────────── */
 .msg-item-profile-btn {
   flex-shrink: 0;
   background: none; border: none;
@@ -626,11 +673,11 @@ nav {
 .msg-item:hover .msg-item-profile-btn { opacity: 1; }
 .msg-item-profile-btn:hover { background: var(--blue-light); color: var(--blue); }
 
-/* Topbar left clickable */
+/* ── Topbar left clickable ───────────────────────── */
 .msg-topbar-left { transition: background .15s; border-radius: 10px; padding: 4px 8px; margin-left: -8px; }
 .msg-topbar-left:hover { background: var(--blue-light); }
 
-/* Message context menu */
+/* ── Message context menu ───────────────────────── */
 .msg-ctx-menu {
   position: fixed; z-index: 9000;
   background: var(--bg-white);
@@ -653,7 +700,19 @@ nav {
 .msg-ctx-menu button:last-child { color: var(--gray); }
 .msg-bubble-row { cursor: pointer; }
 
-/* Sidebar conversation action buttons */
+
+/* Back button — hidden on desktop, shown on mobile via media query */
+.msg-back-btn {
+  display: none;
+  align-items: center; gap: 6px;
+  background: none; border: none; cursor: pointer;
+  font: 600 .9rem var(--sans); color: var(--blue);
+  padding: 6px 10px; border-radius: 8px;
+  transition: background .15s; flex-shrink: 0;
+}
+.msg-back-btn:hover { background: var(--blue-light); }
+
+/* ── Sidebar conversation action buttons ────────── */
 .msg-item-actions {
   display: flex; gap: 4px; flex-shrink: 0;
   opacity: 0; transition: opacity .15s;
@@ -785,7 +844,7 @@ nav {
 
 .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
 
-/* Session processing / completed notice */
+/* ── Session processing / completed notice ──────── */
 .session-processing {
   margin-top: 12px; padding: 10px 14px;
   background: #D1FAE5; color: #065F46;
@@ -793,7 +852,7 @@ nav {
 }
 .status-completed { background: #D1FAE5; color: #065F46; }
 
-/* Call link input */
+/* ── Call link input ─────────────────────────────── */
 #sched-call-link {
   background: var(--bg-white) !important;
   color: var(--text) !important;
@@ -805,7 +864,7 @@ nav {
   box-shadow: var(--focus) !important;
 }
 
-/* Conversation unread indicator */
+/* ── Conversation unread indicator ──────────────── */
 .conv-unread-dot {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--brand); color: #fff;
@@ -815,7 +874,7 @@ nav {
 }
 .unread-preview { font-weight: 600; color: var(--text); }
 
-/* Admin stats row */
+/* ── Admin stats row ─────────────────────────────── */
 .admin-stats {
   display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
 }
@@ -827,10 +886,118 @@ nav {
 .admin-stat-n { font-size: 1.8rem; font-weight: 800; color: var(--blue); }
 .admin-stat-l { font-size: .78rem; color: var(--gray); margin-top: 2px; }
 
-/*  Admin guide banner  */
+/* ── Admin guide banner ──────────────────────────── */
 .admin-guide {
   background: var(--blue-light); border: 1px solid #BFDBFE;
   border-radius: 10px; padding: 12px 16px;
   font-size: .82rem; color: var(--blue-dark);
   margin-bottom: 20px; line-height: 1.6;
+}
+
+/* =====================================================
+   SESSIONS EMPTY STATE
+   ===================================================== */
+.sessions-empty {
+  text-align: center;
+  padding: 64px 24px;
+  color: var(--muted);
+}
+.sessions-empty h3 {
+  font-family: var(--serif); font-size: 1.5rem;
+  margin-bottom: 8px; color: var(--text);
+}
+.sessions-empty p {
+  font-size: .9rem; line-height: 1.6; max-width: 340px;
+  margin: 0 auto;
+}
+
+/* =====================================================
+   ADMIN — SEARCH, GUIDE GRID, ROW LAYOUT
+   ===================================================== */
+.admin-search-row {
+  margin-bottom: 16px;
+}
+.admin-search-input {
+  width: 100%; max-width: 420px;
+  border: 1.5px solid var(--border); border-radius: 999px;
+  padding: 10px 20px; font: .9rem var(--sans);
+  background: var(--bg-white); color: var(--text); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.admin-search-input:focus { border-color: var(--blue); box-shadow: var(--focus); }
+.admin-search-input::placeholder { color: #9CA3AF; }
+
+/* Guide grid — replaces the long paragraph */
+.admin-guide-grid {
+  display: flex; flex-wrap: wrap; gap: 10px;
+}
+.admin-guide-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: var(--bg-white); border: 1px solid #BFDBFE;
+  border-radius: 10px; padding: 10px 14px;
+  flex: 1; min-width: 140px;
+}
+.admin-guide-item span { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
+.admin-guide-item strong { font-size: .85rem; display: block; color: var(--blue-dark); }
+.admin-guide-item p { font-size: .75rem; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+/* Admin row — stack info on top, actions below */
+.admin-user-row {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.admin-row-actions {
+  width: 100%;
+  padding-top: 12px;
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+}
+.admin-row-actions .admin-actions {
+  flex-shrink: unset;
+}
+
+/* Tighten action buttons in admin panel */
+.admin-page .sa-btn {
+  padding: 7px 14px;
+  font-size: .8rem;
+}
+
+/* Admin nav link — styled to stand out slightly */
+#nav-admin-link {
+  background: #FEF3C7;
+  color: #92400E;
+  padding: 5px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: .82rem;
+}
+#nav-admin-link:hover { background: #FDE68A; color: #78350F; }
+
+/* =====================================================
+   WARN MODAL & FORGOT PASSWORD MODAL
+   ===================================================== */
+/* Both use the existing .modal and .modal-overlay styles —
+   just need the textarea inside warn modal to match form style */
+#warn-msg-input {
+  width: 100%; border: 1.5px solid var(--border); border-radius: 10px;
+  padding: 11px 14px; font: .9rem var(--sans);
+  background: var(--bg-white); color: var(--text); outline: none;
+  transition: border-color .18s, box-shadow .18s;
+  min-height: 100px; resize: vertical;
+}
+#warn-msg-input:focus { border-color: var(--blue); box-shadow: var(--focus); }
+#warn-msg-input::placeholder { color: #9CA3AF; }
+
+/* =====================================================
+   PV ADMIN ACTIONS (profile view modal)
+   ===================================================== */
+.pv-admin-actions {
+  margin-top: 20px; padding-top: 18px;
+  border-top: 1px solid var(--border);
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.pv-admin-label {
+  width: 100%; font-size: .72rem; font-weight: 700;
+  color: var(--gray); letter-spacing: .07em;
+  text-transform: uppercase; margin-bottom: 4px;
 }

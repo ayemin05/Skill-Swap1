@@ -1,4 +1,4 @@
-#  Stage 1: Build
+# ── Stage 1: Build ───────────────────────────────────────────────────────────
 FROM golang:1.22-alpine AS builder
 
 # gcc + musl-dev needed by go-sqlite3 (cgo)
@@ -11,7 +11,7 @@ RUN go mod download
 COPY . .
 RUN CGO_ENABLED=1 GOOS=linux go build -ldflags="-s -w" -o skillswap .
 
-#  Stage 2: Runtime
+# ── Stage 2: Runtime ─────────────────────────────────────────────────────────
 FROM alpine:3.19
 RUN apk add --no-cache ca-certificates sqlite-libs
 

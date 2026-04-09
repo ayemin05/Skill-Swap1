@@ -4,6 +4,10 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <meta name="description" content="Skill Swap – a peer-to-peer platform to exchange skills."/>
+  <meta property="og:title" content="Skill Swap – Learn by Teaching, Teach by Learning"/>
+  <meta property="og:description" content="Exchange skills peer-to-peer. No money, just knowledge."/>
+  <meta property="og:type" content="website"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect x='2' y='2' width='22' height='16' rx='5' fill='%232563EB'/><polygon points='4,18 13,18 4,26' fill='%232563EB'/><rect x='16' y='21' width='22' height='16' rx='5' fill='%23C0392B'/><polygon points='36,37 27,37 36,45' fill='%23C0392B'/></svg>"/>
   <title>Skill Swap – Learn by Teaching, Teach by Learning</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
@@ -12,7 +16,7 @@
 </head>
 <body>
 
-<!-- NAV -->
+<!-- ══ NAV ══════════════════════════════════════════ -->
 <nav>
   <div class="nav-inner">
     <div class="logo" onclick="showPage('home')">
@@ -31,15 +35,19 @@
       <a onclick="showPage('browse')">Browse</a>
       <a id="nav-msg-link"      style="display:none" onclick="showPage('messages')">Message</a>
       <a id="nav-sessions-link" style="display:none" onclick="showPage('sessions')">Sessions</a>
+      <a id="nav-admin-link"    style="display:none" onclick="showPage('admin')">Admin</a>
       <button id="nav-getstarted-btn" class="nav-btn btn-nav-primary" onclick="openAuthModal('register')">Get Started</button>
       <button id="nav-back-btn"       class="nav-btn btn-nav-outline" style="display:none" onclick="goBack()">Back</button>
       <button id="nav-profile-btn"    class="nav-btn btn-nav-soft"    style="display:none" onclick="showPage('create-profile')">My Profile</button>
       <button id="nav-logout-btn"     class="nav-btn btn-nav-outline" style="display:none" onclick="doLogout()">Log Out</button>
     </div>
+    <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Open navigation menu">
+      <span></span><span></span><span></span>
+    </button>
   </div>
 </nav>
 
-<!-- HOME -->
+<!-- ══ HOME ═════════════════════════════════════════ -->
 <div id="page-home" class="page active">
   <section class="hero">
     <h1>Learn by Teaching,<br/>Teach by Learning</h1>
@@ -95,7 +103,7 @@
   </section>
 </div>
 
-<!-- PROFILE -->
+<!-- ══ PROFILE ══════════════════════════════════════ -->
 <div id="page-create-profile" class="page">
   <div class="profile-page">
     <div class="profile-card">
@@ -164,7 +172,7 @@
   </div>
 </div>
 
-<!-- BROWSE -->
+<!-- ══ BROWSE ════════════════════════════════════════ -->
 <div id="page-browse" class="page">
   <div class="browse-header">
     <div class="container">
@@ -198,7 +206,7 @@
   </div>
 </div>
 
-<!-- MESSAGES -->
+<!-- ══ MESSAGES ══════════════════════════════════════ -->
 <div id="page-messages" class="page msg-page">
   <div class="msg-sidebar" id="msg-sidebar">
     <div class="msg-sidebar-header">
@@ -217,7 +225,7 @@
   </div>
 </div>
 
-<!-- SCHEDULE -->
+<!-- ══ SCHEDULE ══════════════════════════════════════ -->
 <div id="page-schedule" class="page">
   <div class="schedule-page">
     <div class="schedule-card">
@@ -242,7 +250,7 @@
 
       <div class="form-group">
         <label for="sched-date">Select Date</label>
-        <input type="date" class="teal-input" id="sched-date"/>
+        <input type="date" class="teal-input" id="sched-date" min=""/>
       </div>
       <div class="form-group">
         <label for="sched-time">Select Time</label>
@@ -288,7 +296,7 @@
   </div>
 </div>
 
-<!-- SESSIONS -->
+<!-- ══ SESSIONS ══════════════════════════════════════ -->
 <div id="page-sessions" class="page">
   <div class="sessions-page">
     <div class="container">
@@ -298,7 +306,7 @@
   </div>
 </div>
 
-<!-- ADMIN -->
+<!-- ══ ADMIN ════════════════════════════════════════ -->
 <div id="page-admin" class="page">
   <div class="admin-page">
     <div class="container">
@@ -311,7 +319,7 @@
   </div>
 </div>
 
-<!-- AUTH MODAL -->
+<!-- ══ AUTH MODAL ════════════════════════════════════ -->
 <div class="modal-overlay" id="auth-modal">
   <div class="modal">
     <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
@@ -330,6 +338,7 @@
         <input type="password" id="login-pass" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
       </div>
       <button class="btn-primary" style="width:100%;margin-top:6px" id="login-btn" onclick="doLogin()">Sign In</button>
+      <div class="auth-switch" style="margin-top:10px">Forgot your password? <a onclick="closeAuthModal();openForgotModal()">Reset it</a></div>
       <div class="auth-switch">Don't have an account? <a onclick="switchTab('register')">Sign up free</a></div>
     </div>
     <div id="register-form" style="display:none">
@@ -352,12 +361,12 @@
   </div>
 </div>
 
-<!-- PROFILE VIEW MODAL -->
+<!-- ══ PROFILE VIEW MODAL ════════════════════════════ -->
 <div class="modal-overlay" id="pv-modal" onclick="closePVModal(event)">
   <div class="pv-modal" id="pv-content"></div>
 </div>
 
-<!-- SUCCESS MODAL -->
+<!-- ══ SUCCESS MODAL ═════════════════════════════════ -->
 <div class="modal-overlay" id="success-modal">
   <div class="modal success-modal">
     <div class="big-icon" id="sm-icon">🎉</div>
@@ -368,6 +377,36 @@
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- ══ WARN MODAL ════════════════════════════════════ -->
+<div class="modal-overlay" id="warn-modal">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close-btn" onclick="closeWarnModal()" aria-label="Close">✕</button>
+    <h2 style="font-family:var(--serif);font-size:1.5rem;margin-bottom:6px">⚠️ Send Warning</h2>
+    <p class="sub" id="warn-modal-sub" style="color:var(--gray);font-size:.88rem;margin-bottom:18px">Send a warning message to this user.</p>
+    <div class="form-group">
+      <label for="warn-msg-input">Warning message</label>
+      <textarea id="warn-msg-input" placeholder="Describe the issue or leave blank for a default warning…" style="min-height:100px"></textarea>
+    </div>
+    <button class="btn-primary" style="width:100%" onclick="submitWarn()">Send Warning</button>
+  </div>
+</div>
+
+<!-- ══ FORGOT PASSWORD MODAL ═════════════════════════ -->
+<div class="modal-overlay" id="forgot-modal">
+  <div class="modal" style="max-width:420px">
+    <button class="modal-close-btn" onclick="closeForgotModal()" aria-label="Close">✕</button>
+    <h2 style="font-family:var(--serif);font-size:1.5rem;margin-bottom:6px">Reset Password</h2>
+    <p class="sub" style="color:var(--gray);font-size:.88rem;margin-bottom:18px">Enter your email and we'll send you a reset link.</p>
+    <div class="err-banner" id="forgot-err"></div>
+    <div class="form-group">
+      <label for="forgot-email">Email address</label>
+      <input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email" onkeydown="if(event.key==='Enter')submitForgot()"/>
+    </div>
+    <button class="btn-primary" style="width:100%" id="forgot-btn" onclick="submitForgot()">Send Reset Link</button>
+    <div class="auth-switch" style="margin-top:14px"><a onclick="closeForgotModal();openAuthModal('login')">Back to Sign In</a></div>
+  </div>
+</div>
 <script src="/static/js/main.js?v=1"></script>
 </body>
 </html>

@@ -26,36 +26,53 @@ const S = {
 
 const COLORS = ['#7986CB','#26A69A','#EF5350','#66BB6A','#FFA726','#AB47BC','#5C6BC0','#00897B'];
 
-// API helper
+// ── API helper ───────────────────────────────────────
+// All API calls go through here. It adds JSON headers and throws on error responses.
 async function api(method, path, body) {
   const opts = { method, headers: {'Content-Type': 'application/json'}, credentials: 'include' };
   if (body) opts.body = JSON.stringify(body);
   const res  = await fetch(path, opts);
   const data = await res.json();
-  // console.log(method, path, data);
   if (!res.ok) throw new Error(data.error || 'Request failed');
-  // TODO: maybe add retry logic here for network failures
   return data;
 }
 
-// App startup 
+// ── App startup ──────────────────────────────────────
+// On load: check if there's a valid session cookie and restore the logged-in state.
 async function init() {
   try {
     S.user = await api('GET', '/api/me');
     onLoggedIn();
-    console.log('logged in as', S.user.name);
   } catch { /* no session — guest mode */ }
 
   // Default the schedule date to tomorrow
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  document.getElementById('sched-date').value = tomorrow.toISOString().split('T')[0];
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  document.getElementById('sched-date').value = tomorrowStr;
+  document.getElementById('sched-date').min   = tomorrowStr;
 
   loadUsers();
 }
 
-// Navigation 
+// ── Navigation ───────────────────────────────────────
+// showPage hides all page divs and shows the requested one.
+// It also triggers any data loading needed for that page.
+function toggleMobileMenu() {
+  const links = document.getElementById('nav-links');
+  const btn   = document.getElementById('hamburger-btn');
+  const open  = links.classList.toggle('mobile-open');
+  btn.classList.toggle('open', open);
+}
+
+function closeMobileMenu() {
+  document.getElementById('nav-links').classList.remove('mobile-open');
+  document.getElementById('hamburger-btn').classList.remove('open');
+}
+
 function showPage(pg) {
+  closeMobileMenu();
+  document.getElementById('page-messages')?.classList.remove('conv-open');
   if (pg !== 'messages') stopPolling();
 
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -117,7 +134,7 @@ function updateNav() {
   const profileBtn = document.getElementById('nav-profile-btn');
   if (profileBtn) {
     profileBtn.style.display = loggedIn && !backPages.includes(S.page) ? '' : 'none';
-    profileBtn.textContent   = (loggedIn && S.user && S.user.is_admin) ? '\u2699\uFE0F My Profile' : 'My Profile';
+    profileBtn.textContent   = 'My Profile';
   }
   document.getElementById('nav-logout-btn').style.display      = loggedIn ? '' : 'none';
   document.getElementById('nav-msg-link').style.display        = loggedIn ? '' : 'none';
@@ -137,10 +154,15 @@ function onGetStarted() {
   else         showPage('create-profile');
 }
 
-// Auth 
+// ── Auth ─────────────────────────────────────────────
 function openAuthModal(tab) {
   switchTab(tab || 'login');
-  document.getElementById('auth-modal').classList.add('show');
+  const modal = document.getElementById('auth-modal');
+  modal.classList.add('show');
+  setTimeout(() => {
+    const first = modal.querySelector('input, button:not(.modal-close-btn)');
+    if (first) first.focus();
+  }, 50);
 }
 function closeAuthModal() { document.getElementById('auth-modal').classList.remove('show'); }
 function switchTab(tab) {
@@ -175,6 +197,8 @@ async function doRegister() {
   const btn   = document.getElementById('reg-btn');
   err.classList.remove('show');
   if (!name || !email || !pass) { err.textContent = 'Please fill all fields'; err.classList.add('show'); return; }
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!emailOk) { err.textContent = 'Please enter a valid email address'; err.classList.add('show'); return; }
   if (pass.length < 6) { err.textContent = 'Password must be at least 6 characters'; err.classList.add('show'); return; }
   btn.disabled = true; btn.textContent = 'Creating account\u2026';
   try {
@@ -219,7 +243,9 @@ async function doLogout() {
   showToast('Logged out. See you soon!');
 }
 
-// Profile 
+// ── Profile ──────────────────────────────────────────
+// previewAv: when the user picks a photo, show a preview and upload it to the server right away.
+// Storing the server URL (not base64) means it persists after logout.
 function previewAv(input) {
   const file = input.files[0]; if (!file) return;
   const reader = new FileReader();
@@ -296,7 +322,7 @@ async function saveProfile() {
   finally { btn.disabled = false; btn.textContent = 'Save Profile & Continue'; }
 }
 
-// Browse
+// ── Browse ───────────────────────────────────────────
 function setFilter(f, btn) {
   S.filter = f;
   document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
@@ -395,7 +421,9 @@ function renderCards(users) {
   }).join('');
 }
 
-// Profile View Modal
+// ── Profile View Modal ────────────────────────────────
+// viewProfile fetches a user and opens a modal with their full profile.
+// When the viewer is an admin, extra management buttons appear at the bottom.
 async function viewProfile(id) {
   try {
     const u        = await api('GET', '/api/users/' + id);
@@ -466,13 +494,14 @@ function closePVModal(e) {
     document.getElementById('pv-modal').classList.remove('show');
 }
 
-// Messages & conversations
+// ── Messages ─────────────────────────────────────────
 function startMessage(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   showPage('messages');
   setTimeout(() => openConversation(userId, name), 150);
 }
 
+// refreshUnreadBadge fetches conversations and updates the nav badge with total unread count
 async function refreshUnreadBadge() {
   if (!S.user) return;
   try {
@@ -496,6 +525,7 @@ function updateMsgBadge(count) {
 }
 
 // renderConvList builds the conversation sidebar.
+// Uses string concatenation throughout to avoid Node v22 template literal parsing issues.
 function renderConvList(convs) {
   const list = document.getElementById('msg-conv-list');
   if (!list) return;
@@ -545,6 +575,7 @@ async function openConversation(userId, name) {
   if (!S.user) return;
   S.activeConv = userId;
   stopPolling();
+  document.getElementById('page-messages').classList.add('conv-open');
 
   // Instantly clear the unread dot for this conversation in the DOM
   const items = document.querySelectorAll('.msg-item');
@@ -579,6 +610,7 @@ async function openConversation(userId, name) {
   const main = document.getElementById('msg-main');
   main.innerHTML =
     '<div class="msg-topbar">'
+    + '<button class="msg-back-btn" onclick="closeMobileConversation()" aria-label="Back to conversations">\u2190 Back</button>'
     + '<div class="msg-topbar-left" onclick="viewProfile(' + userId + ')" style="cursor:pointer;gap:12px">'
     + topbarAv
     + '<div>'
@@ -609,6 +641,13 @@ async function openConversation(userId, name) {
 function stopPolling() {
   if (S.pollTimer)    { clearInterval(S.pollTimer);    S.pollTimer    = null; }
   if (S.sidebarTimer) { clearInterval(S.sidebarTimer); S.sidebarTimer = null; }
+}
+
+function closeMobileConversation() {
+  document.getElementById('page-messages').classList.remove('conv-open');
+  S.activeConv = null;
+  stopPolling();
+  loadConversations();
 }
 
 // renderMessages builds the chat bubbles.
@@ -667,7 +706,6 @@ async function fetchMessagesSilent(userId) {
   try {
     const msgs = await api('GET', '/api/messages?with=' + userId);
     const list = msgs || [];
-    // console.log('msg count:', list.length);
     if (list.length !== body.querySelectorAll('.msg-bubble-row').length) {
       renderMessages(list, body);
     }
@@ -678,7 +716,6 @@ async function sendMsg(userId) {
   const input   = document.getElementById('msg-in');
   const content = input.value.trim(); if (!content) return;
   input.value   = '';
-  console.log('sending to', userId);
   try {
     await api('POST', '/api/messages', {receiver_id: userId, content});
     fetchMessages(userId); loadConversations();
@@ -707,7 +744,8 @@ async function deleteConversation(userId, name) {
   } catch(e) { showToast('Could not delete: ' + e.message); }
 }
 
-// Schedule stuff
+// ── Schedule ─────────────────────────────────────────
+// openSchedule populates the schedule form with both users' skills as dropdowns
 async function openSchedule(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   S.scheduleWith = userId;
@@ -776,13 +814,13 @@ async function confirmSession() {
   finally { btn.disabled = false; btn.textContent = 'Send Session Request'; }
 }
 
-// Sessions list 
+// ── Sessions list ────────────────────────────────────
 async function loadSessions() {
   const list = document.getElementById('sessions-list');
   try {
     const sessions = await api('GET', '/api/sessions');
     if (!sessions || !sessions.length) {
-      list.innerHTML = '<div style="color:var(--gray);padding:16px 0">No sessions yet. Browse matches and schedule one!</div>';
+      list.innerHTML = '<div class="sessions-empty"><div style="font-size:2.5rem;margin-bottom:16px">📅</div><h3>No sessions yet</h3><p>Browse people with skills you want to learn and send them a session request!</p><button class="btn-primary" style="margin-top:16px" onclick="showPage(\'browse\')">Browse Skills</button></div>';
       return;
     }
     list.innerHTML = sessions.map(s => renderSessionCard(s)).join('');
@@ -908,7 +946,7 @@ function renderSessionCard(s) {
     + '<p style="font-size:.83rem;color:var(--muted);margin-bottom:10px">Suggest a new time — the other person will need to re-confirm.</p>'
     + '<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end">'
     + '<div><label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:4px">New Date</label>'
-    + '<input type="date" id="rs-date-' + s.id + '" class="teal-input"/></div>'
+    + '<input type="date" id="rs-date-' + s.id + '" class="teal-input" min="' + new Date().toISOString().split('T')[0] + '"/></div>'
     + '<div><label style="font-size:.8rem;font-weight:600;display:block;margin-bottom:4px">New Time</label>'
     + '<input type="time" id="rs-time-' + s.id + '" class="teal-input" value="18:00"/></div>'
     + '<button class="sa-btn sa-confirm" onclick="submitReschedule(' + s.id + ')">Send Suggestion</button>'
@@ -937,7 +975,7 @@ function renderSessionCard(s) {
     + '</div>';
 }
 
-//  Star rating 
+// ── Star rating ───────────────────────────────────────
 function hoverStars(sessionId, n) {
   const picker   = document.getElementById('stars-' + sessionId);
   if (!picker) return;
@@ -1032,7 +1070,8 @@ async function refreshSessionBadge() {
   } catch {}
 }
 
-//  Admin 
+// ── Admin ─────────────────────────────────────────────
+// loadAdminUsers fetches all users and renders the admin panel with stats and action buttons.
 async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
   if (!list) return;
@@ -1052,15 +1091,20 @@ async function loadAdminUsers() {
       + '<div class="admin-stat"><div class="admin-stat-n" style="color:#DC2626">' + banned + '</div><div class="admin-stat-l">Banned</div></div>'
       + '</div>';
 
+    const searchHtml =
+      '<div class="admin-search-row">'
+      + '<input type="text" id="admin-search-input" class="admin-search-input" placeholder="Search by name or email\u2026" oninput="filterAdminUsers()"/>'
+      + '</div>';
+
     const guideHtml =
       '<div class="admin-guide">'
-      + '<strong>Admin Actions:</strong> '
-      + '\uD83D\uDEAB <strong>Ban</strong> \u2014 kicks user out immediately, hides from browse \u00B7 '
-      + '\u2713 <strong>Unban</strong> \u2014 restore access \u00B7 '
-      + '\u26A0\uFE0F <strong>Warn</strong> \u2014 send a warning message to their inbox \u00B7 '
-      + '\u2B50 <strong>Make Admin</strong> \u2014 give admin rights \u00B7 '
-      + '\uD83D\uDDD1 <strong>Delete</strong> \u2014 permanently remove user and all their data'
-      + '</div>';
+      + '<div class="admin-guide-grid">'
+      + '<div class="admin-guide-item"><span>\uD83D\uDEAB</span><div><strong>Ban</strong><p>Kicks out immediately, hides from browse</p></div></div>'
+      + '<div class="admin-guide-item"><span>\u2713</span><div><strong>Unban</strong><p>Restores full access</p></div></div>'
+      + '<div class="admin-guide-item"><span>\u26A0\uFE0F</span><div><strong>Warn</strong><p>Sends a warning to their inbox</p></div></div>'
+      + '<div class="admin-guide-item"><span>\u2B50</span><div><strong>Make Admin</strong><p>Grants admin rights</p></div></div>'
+      + '<div class="admin-guide-item"><span>\uD83D\uDDD1</span><div><strong>Delete</strong><p>Permanently removes all data</p></div></div>'
+      + '</div></div>';
 
     const usersHtml = users.map(u => {
       const isSelf  = S.user && u.id === S.user.id;
@@ -1082,7 +1126,7 @@ async function loadAdminUsers() {
           : '<button class="sa-btn sa-decline"    onclick="adminAction(\'ban\','    + u.id + ',\'' + en + '\')">\uD83D\uDEAB Ban</button>')
         + '<button class="sa-btn sa-reschedule"   onclick="adminWarn('             + u.id + ',\'' + en + '\')">\u26A0\uFE0F Warn</button>'
         + (!u.is_admin ? '<button class="sa-btn sa-reschedule" style="background:#EDE9FE;color:#5B21B6" onclick="adminAction(\'make_admin\',' + u.id + ',\'' + en + '\')">\u2B50 Make Admin</button>' : '')
-        + '<button class="sa-btn" style="background:#1F2937;color:#fff" onclick="adminAction(\'delete\',' + u.id + ',\'' + en + '\')">\uD83D\uDDD1 Delete</button>'
+        + '<button class="sa-btn sa-decline" onclick="adminAction(\'delete\',' + u.id + ',\'' + en + '\')">\uD83D\uDDD1 Delete</button>'
         + '</div>';
 
       return '<div class="admin-user-row ' + (u.is_banned ? 'admin-banned' : '') + '">'
@@ -1092,20 +1136,41 @@ async function loadAdminUsers() {
         + '<div class="admin-user-name">' + u.name + ' ' + tags + '</div>'
         + '<div class="admin-user-meta">' + u.email + ' \u00B7 ' + u.swaps + ' swaps \u00B7 ' + stars + ' ' + u.rating.toFixed(1) + ' \u00B7 Joined ' + u.created_at.slice(0, 10) + '</div>'
         + '</div></div>'
-        + actions
+        + '<div class="admin-row-actions">' + actions + '</div>'
         + '</div>';
     }).join('');
 
-    list.innerHTML = statsHtml + guideHtml + usersHtml;
+    list.innerHTML = statsHtml + searchHtml + guideHtml + usersHtml;
   } catch(e) { list.innerHTML = '<p style="color:var(--gray)">Could not load: ' + e.message + '</p>'; }
 }
 
-async function adminWarn(userId, name) {
-  const msg = prompt('Send a warning message to ' + name + ':\n(Leave blank for a default warning)');
-  if (msg === null) return; // user cancelled
+// Warn modal — replaces browser prompt() with a proper styled modal
+let _warnUserId = null;
+let _warnUserName = null;
+
+function adminWarn(userId, name) {
+  _warnUserId   = userId;
+  _warnUserName = name;
+  const sub = document.getElementById('warn-modal-sub');
+  if (sub) sub.textContent = 'Send a warning message to ' + name + '.';
+  const input = document.getElementById('warn-msg-input');
+  if (input) input.value = '';
+  document.getElementById('warn-modal').classList.add('show');
+  setTimeout(() => { if (input) input.focus(); }, 50);
+}
+
+function closeWarnModal() {
+  document.getElementById('warn-modal').classList.remove('show');
+  _warnUserId = null; _warnUserName = null;
+}
+
+async function submitWarn() {
+  if (!_warnUserId) return;
+  const msg = document.getElementById('warn-msg-input').value.trim();
   try {
-    await api('PUT', '/api/admin/action', {action: 'warn', user_id: userId, warn_msg: msg});
-    showToast('\u26A0\uFE0F Warning sent to ' + name);
+    await api('PUT', '/api/admin/action', {action: 'warn', user_id: _warnUserId, warn_msg: msg});
+    showToast('\u26A0\uFE0F Warning sent to ' + _warnUserName);
+    closeWarnModal();
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
@@ -1127,7 +1192,7 @@ async function adminAction(action, userId, name) {
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
-//  Delete account 
+// ── Delete account ────────────────────────────────────
 async function deleteAccount() {
   if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
   if (!confirm('Last chance \u2014 this will permanently delete your profile, messages and sessions.')) return;
@@ -1138,7 +1203,50 @@ async function deleteAccount() {
   } catch(e) { showToast('Could not delete account: ' + e.message); }
 }
 
-//  Modals & Toast 
+// ── Modals & Toast ────────────────────────────────────
+// ── Forgot Password ──────────────────────────────────
+function openForgotModal() {
+  const err = document.getElementById('forgot-err');
+  if (err) err.classList.remove('show');
+  const input = document.getElementById('forgot-email');
+  if (input) input.value = '';
+  document.getElementById('forgot-modal').classList.add('show');
+  setTimeout(() => { if (input) input.focus(); }, 50);
+}
+
+function closeForgotModal() {
+  document.getElementById('forgot-modal').classList.remove('show');
+}
+
+async function submitForgot() {
+  const email = document.getElementById('forgot-email').value.trim();
+  const err   = document.getElementById('forgot-err');
+  const btn   = document.getElementById('forgot-btn');
+  err.classList.remove('show');
+  if (!email) { err.textContent = 'Please enter your email address'; err.classList.add('show'); return; }
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  if (!emailOk) { err.textContent = 'Please enter a valid email address'; err.classList.add('show'); return; }
+  btn.disabled = true; btn.textContent = 'Sending\u2026';
+  try {
+    await api('POST', '/api/forgot-password', {email});
+    closeForgotModal();
+    showToast('\uD83D\uDCE7 Reset link sent! Check your inbox.');
+  } catch(e) {
+    // Show success either way so we don't reveal which emails are registered
+    closeForgotModal();
+    showToast('\uD83D\uDCE7 If that email exists, a reset link has been sent.');
+  } finally { btn.disabled = false; btn.textContent = 'Send Reset Link'; }
+}
+
+// ── Admin user search (client-side filter) ────────────
+function filterAdminUsers() {
+  const q = (document.getElementById('admin-search-input')?.value || '').toLowerCase().trim();
+  document.querySelectorAll('.admin-user-row').forEach(row => {
+    const text = row.textContent.toLowerCase();
+    row.style.display = (!q || text.includes(q)) ? '' : 'none';
+  });
+}
+
 function showSuccess(icon, title, msg, cb) {
   document.getElementById('sm-icon').textContent  = icon;
   document.getElementById('sm-title').textContent = title;
@@ -1156,7 +1264,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// Session preference 
+// ── Session preference ────────────────────────────────
 // Show/hide the location field depending on session preference selection
 function onPrefChange(radio) {
   const locGroup = document.getElementById('location-group');
@@ -1165,4 +1273,5 @@ function onPrefChange(radio) {
   }
 }
 
+// ── Boot ─────────────────────────────────────────────
 init();
