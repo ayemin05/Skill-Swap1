@@ -100,7 +100,7 @@ The project includes a multi-stage Dockerfile that compiles the Go binary in a b
 
 - "Forgot password?" link on the sign-in form
 - User enters their email and receives a reset link via email
-- Powered by Resend — a secure token is generated, stored with a 1-hour expiry, and emailed to the user
+- Powered by Resend via skillswapfly.quest — a secure token is generated, stored with a 1-hour expiry, and emailed to the user
 - Clicking the link opens a reset page where the user sets a new password
 - Token is deleted and all existing sessions are invalidated after a successful reset
 - Always returns a success message regardless of whether the email exists, so registered emails are never revealed

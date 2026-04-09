@@ -1191,7 +1191,7 @@ func sendResetEmail(toEmail, resetURL string) error {
 	</div>`
 
 	payload := map[string]interface{}{
-		"from":    "Skill Swap <onboarding@resend.dev>",
+		"from":    "Skill Swap <noreply@skillswapfly.quest>",
 		"to":      []string{toEmail},
 		"subject": "Reset your Skill Swap password",
 		"html":    htmlBody,
