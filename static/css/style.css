@@ -3,7 +3,7 @@
    Colour redesign + full accessibility
    ===================================================== */
 
-/* ── Design Tokens ──────────────────────────────── */
+/* Design Tokens  */
 :root {
   /* Brand: warm coral-red for identity / hero only */
   --brand:        #C0392B;
@@ -52,22 +52,22 @@
   --focus: 0 0 0 3px rgba(37,99,235,.45);
 }
 
-/* ── Reset ──────────────────────────────────────── */
+/* Reset */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body { font-family: var(--sans); background: var(--bg-white); color: var(--text); min-height: 100vh; -webkit-font-smoothing: antialiased; }
 
-/* ── Focus visible ──────────────────────────────── */
+/* Focus visible */
 :focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; border-radius: 4px; }
 
-/* ── Container ──────────────────────────────────── */
+/* Container */
 .container {
   width: 100%; max-width: 1160px;
   margin-left: auto; margin-right: auto;
   padding-left: 48px; padding-right: 48px;
 }
 
-/* ── Global buttons ─────────────────────────────── */
+/* Global buttons */
 /* Primary CTA – blue */
 .btn-primary {
   display: inline-block; background: var(--blue); color: #fff;
@@ -108,7 +108,7 @@ body { font-family: var(--sans); background: var(--bg-white); color: var(--text)
 }
 .btn-ghost:hover { background: #1F2937; transform: translateY(-1px); }
 
-/* ── Page system ────────────────────────────────── */
+/* Page system */
 .page { display: none; }
 .page.active { display: block; animation: fadeUp .22s ease; }
 .page.msg-page.active { display: flex; }
@@ -484,7 +484,7 @@ nav {
 .success-modal p  { color: var(--gray); margin-bottom: 28px; font-size: .9rem; line-height: 1.6; }
 .success-modal .btn-primary { width: 100%; }
 
-/* ── Toast ──────────────────────────────────────── */
+/* Toast  */
 .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px); background: #111827; color: #fff; padding: 13px 28px; border-radius: 999px; font-size: .88rem; font-weight: 500; z-index: 9999; pointer-events: none; transition: transform .28s ease; }
 .toast.show { transform: translateX(-50%) translateY(0); }
 
@@ -589,7 +589,7 @@ nav {
 }
 .pref-icon { font-size: 1.2rem; }
 
-/* ── Session pref + location badge on user cards ─── */
+/* Session pref + location badge on user cards */
 .card-pref {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: .73rem; font-weight: 600;
@@ -622,7 +622,7 @@ nav {
 .btn-danger:hover { background: #FEE2E2; }
 .danger-hint { font-size: .76rem; color: var(--gray); margin-top: 8px; }
 
-/* ── Delete message button ──────────────────────────── */
+/* Delete message button */
 .msg-bubble-row { position: relative; }
 .msg-delete-btn {
   display: none;
@@ -640,7 +640,7 @@ nav {
 .msg-bubble-row:not(.me) .msg-delete-btn { left: calc(100% + 6px); right: auto; }
 .msg-delete-btn:hover { background: #DC2626; color: #fff; }
 
-/* ── Nav unread badge ───────────────────────────── */
+/* Nav unread badge */
 .nav-badge {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--brand); color: #fff;
@@ -650,7 +650,7 @@ nav {
   line-height: 1;
 }
 
-/* ── Online indicator ───────────────────────────── */
+/* Online indicator  */
 .online-dot {
   display: inline-block;
   width: 8px; height: 8px;
@@ -661,7 +661,7 @@ nav {
   box-shadow: 0 0 0 2px rgba(34,197,94,.25);
 }
 
-/* ── Sidebar conversation profile button ─────────── */
+/* Sidebar conversation profile button */
 .msg-item-profile-btn {
   flex-shrink: 0;
   background: none; border: none;
@@ -673,11 +673,11 @@ nav {
 .msg-item:hover .msg-item-profile-btn { opacity: 1; }
 .msg-item-profile-btn:hover { background: var(--blue-light); color: var(--blue); }
 
-/* ── Topbar left clickable ───────────────────────── */
+/* Topbar left clickable  */
 .msg-topbar-left { transition: background .15s; border-radius: 10px; padding: 4px 8px; margin-left: -8px; }
 .msg-topbar-left:hover { background: var(--blue-light); }
 
-/* ── Message context menu ───────────────────────── */
+/* Message context menu */
 .msg-ctx-menu {
   position: fixed; z-index: 9000;
   background: var(--bg-white);
@@ -712,7 +712,7 @@ nav {
 }
 .msg-back-btn:hover { background: var(--blue-light); }
 
-/* ── Sidebar conversation action buttons ────────── */
+/* Sidebar conversation action buttons  */
 .msg-item-actions {
   display: flex; gap: 4px; flex-shrink: 0;
   opacity: 0; transition: opacity .15s;
@@ -844,7 +844,7 @@ nav {
 
 .admin-actions { display: flex; gap: 8px; flex-wrap: wrap; flex-shrink: 0; }
 
-/* ── Session processing / completed notice ──────── */
+/* Session processing / completed notice */
 .session-processing {
   margin-top: 12px; padding: 10px 14px;
   background: #D1FAE5; color: #065F46;
@@ -852,7 +852,7 @@ nav {
 }
 .status-completed { background: #D1FAE5; color: #065F46; }
 
-/* ── Call link input ─────────────────────────────── */
+/* Call link input */
 #sched-call-link {
   background: var(--bg-white) !important;
   color: var(--text) !important;
@@ -864,7 +864,7 @@ nav {
   box-shadow: var(--focus) !important;
 }
 
-/* ── Conversation unread indicator ──────────────── */
+/* Conversation unread indicator */
 .conv-unread-dot {
   display: inline-flex; align-items: center; justify-content: center;
   background: var(--brand); color: #fff;
@@ -874,7 +874,7 @@ nav {
 }
 .unread-preview { font-weight: 600; color: var(--text); }
 
-/* ── Admin stats row ─────────────────────────────── */
+/* Admin stats row */
 .admin-stats {
   display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
 }
@@ -886,7 +886,7 @@ nav {
 .admin-stat-n { font-size: 1.8rem; font-weight: 800; color: var(--blue); }
 .admin-stat-l { font-size: .78rem; color: var(--gray); margin-top: 2px; }
 
-/* ── Admin guide banner ──────────────────────────── */
+/* Admin guide banner */
 .admin-guide {
   background: var(--blue-light); border: 1px solid #BFDBFE;
   border-radius: 10px; padding: 12px 16px;
