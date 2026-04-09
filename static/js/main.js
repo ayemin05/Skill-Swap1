@@ -36,8 +36,9 @@ let _usersCacheTime = 0;
 let _sessionsCache = null;
 let _sessionsCacheTime = 0;
 let _sessionBadgeTimer = null;
+let _lastSessionStates = {};
 
-// ── API helper ───────────────────────────────────────
+// API helper
 // All API calls go through here. It adds JSON headers and throws on error responses.
 async function api(method, path, body) {
   const opts = { method, headers: {'Content-Type': 'application/json'}, credentials: 'include' };
@@ -48,7 +49,7 @@ async function api(method, path, body) {
   return data;
 }
 
-// ── App startup ──────────────────────────────────────
+// App startup
 // On load: check if there's a valid session cookie and restore the logged-in state.
 async function init() {
   // Check if this is a password reset link
@@ -75,7 +76,7 @@ async function init() {
   loadUsers();
 }
 
-// ── Navigation ───────────────────────────────────────
+// Navigation
 // showPage hides all page divs and shows the requested one.
 // It also triggers any data loading needed for that page.
 function toggleMobileMenu() {
@@ -174,7 +175,7 @@ function onGetStarted() {
   else         showPage('create-profile');
 }
 
-// ── Auth ─────────────────────────────────────────────
+// Auth 
 function openAuthModal(tab) {
   switchTab(tab || 'login');
   const modal = document.getElementById('auth-modal');
@@ -284,7 +285,7 @@ async function doLogout() {
   showToast('Logged out. See you soon!');
 }
 
-// ── Profile ──────────────────────────────────────────
+// Profile 
 // previewAv: when the user picks a photo, show a preview and upload it to the server right away.
 // Storing the server URL (not base64) means it persists after logout.
 function previewAv(input) {
@@ -364,7 +365,7 @@ async function saveProfile() {
   finally { btn.disabled = false; btn.textContent = 'Save Profile & Continue'; }
 }
 
-// ── Browse ───────────────────────────────────────────
+// Browse 
 function setFilter(f, btn) {
   S.filter = f;
   document.querySelectorAll('.filter-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-pressed', 'false'); });
@@ -472,7 +473,7 @@ function renderCards(users) {
   }).join('');
 }
 
-// ── Profile View Modal ────────────────────────────────
+// Profile View Modal
 // viewProfile fetches a user and opens a modal with their full profile.
 // When the viewer is an admin, extra management buttons appear at the bottom.
 async function viewProfile(id) {
@@ -545,7 +546,7 @@ function closePVModal(e) {
     document.getElementById('pv-modal').classList.remove('show');
 }
 
-// ── Messages ─────────────────────────────────────────
+// Messages
 function startMessage(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
   showPage('messages');
@@ -848,7 +849,7 @@ async function deleteConversation(userId, name) {
   } catch(e) { showToast('Could not delete: ' + e.message); }
 }
 
-// ── Schedule ─────────────────────────────────────────
+// Schedule 
 // openSchedule populates the schedule form with both users' skills as dropdowns
 async function openSchedule(userId, name) {
   if (!S.user) { openAuthModal('login'); return; }
@@ -918,7 +919,7 @@ async function confirmSession() {
   finally { btn.disabled = false; btn.textContent = 'Send Session Request'; }
 }
 
-// ── Sessions list ────────────────────────────────────
+// Sessions list 
 async function loadSessions() {
   const list = document.getElementById('sessions-list');
   if (!list) return;
@@ -1096,7 +1097,7 @@ function renderSessionCard(s) {
     + '</div>';
 }
 
-// ── Star rating ───────────────────────────────────────
+// Star rating 
 function hoverStars(sessionId, n) {
   const picker   = document.getElementById('stars-' + sessionId);
   if (!picker) return;
@@ -1184,7 +1185,11 @@ async function refreshSessionBadge() {
     const sessions = await api('GET', '/api/sessions');
     _sessionsCache = sessions;
     _sessionsCacheTime = Date.now();
-    const pending = (sessions||[]).filter(s => s.status === 'pending' && s.partner_id === S.user.id).length;
+    // Save initial states so polling can detect changes
+    sessions.forEach(s => {
+      if (!_lastSessionStates[s.id]) _lastSessionStates[s.id] = s.status;
+    });
+    const pending = sessions.filter(s => s.status === 'pending' && s.partner_id === S.user.id).length;
     updateSessionBadge(pending);
     if (pending > 0 && document.hidden) {
       showMsgNotification('Skill Swap', 'You have ' + pending + ' pending session request' + (pending > 1 ? 's' : '') + '!');
@@ -1206,16 +1211,42 @@ function updateSessionBadge(count) {
 
 function startSessionPolling() {
   if (_sessionBadgeTimer) return;
-  _sessionBadgeTimer = setInterval(() => {
-    if (S.user) refreshSessionBadge();
-  }, 30000);
+  _sessionBadgeTimer = setInterval(async () => {
+    if (!S.user) return;
+    try {
+      const sessions = await api('GET', '/api/sessions');
+      _sessionsCache = sessions;
+      _sessionsCacheTime = Date.now();
+
+      // Check for status changes since last poll
+      sessions.forEach(s => {
+        const prev = _lastSessionStates[s.id];
+        if (prev && prev !== s.status) {
+          const otherName = s.requester_id === S.user.id ? s.partner_name : s.requester_name;
+          if (s.status === 'confirmed') {
+            showMsgNotification('Skill Swap', otherName + ' confirmed your session request!');
+          } else if (s.status === 'declined') {
+            showMsgNotification('Skill Swap', otherName + ' declined your session request.');
+          } else if (s.status === 'cancelled') {
+            showMsgNotification('Skill Swap', otherName + ' cancelled the session.');
+          }
+          // Refresh UI immediately if on sessions page
+          if (S.page === 'sessions') renderSessions(sessions);
+        }
+        _lastSessionStates[s.id] = s.status;
+      });
+
+      const pending = sessions.filter(s => s.status === 'pending' && s.partner_id === S.user.id).length;
+      updateSessionBadge(pending);
+    } catch {}
+  }, 15000);
 }
 
 function stopSessionPolling() {
   if (_sessionBadgeTimer) { clearInterval(_sessionBadgeTimer); _sessionBadgeTimer = null; }
 }
 
-// ── Admin ─────────────────────────────────────────────
+// Admin 
 // loadAdminUsers fetches all users and renders the admin panel with stats and action buttons.
 async function loadAdminUsers() {
   const list = document.getElementById('admin-user-list');
@@ -1337,7 +1368,7 @@ async function adminAction(action, userId, name) {
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
-// ── Delete account ────────────────────────────────────
+// Delete account 
 async function deleteAccount() {
   if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
   if (!confirm('Last chance \u2014 this will permanently delete your profile, messages and sessions.')) return;
@@ -1348,8 +1379,8 @@ async function deleteAccount() {
   } catch(e) { showToast('Could not delete account: ' + e.message); }
 }
 
-// ── Modals & Toast ────────────────────────────────────
-// ── Forgot Password ──────────────────────────────────
+// Modals & Toast 
+// Forgot Password 
 function openForgotModal() {
   const err = document.getElementById('forgot-err');
   if (err) err.classList.remove('show');
@@ -1381,7 +1412,7 @@ async function submitForgot() {
   btn.disabled = false; btn.textContent = 'Send Reset Link';
 }
 
-// ── Admin user search (client-side filter) ────────────
+// Admin user search (client-side filter)
 function filterAdminUsers() {
   const q = (document.getElementById('admin-search-input')?.value || '').toLowerCase().trim();
   document.querySelectorAll('.admin-user-row').forEach(row => {
@@ -1407,7 +1438,7 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2800);
 }
 
-// ── Session preference ────────────────────────────────
+// Session preference 
 // Show/hide the location field depending on session preference selection
 function onPrefChange(radio) {
   const locGroup = document.getElementById('location-group');
@@ -1416,8 +1447,8 @@ function onPrefChange(radio) {
   }
 }
 
-// ── Boot ─────────────────────────────────────────────
-// ── Password Reset ────────────────────────────────────
+// Boot 
+// Password Reset 
 async function submitResetPassword() {
   const pass  = document.getElementById('reset-pass').value;
   const pass2 = document.getElementById('reset-pass2').value;
