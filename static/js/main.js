@@ -97,7 +97,7 @@ function showPage(pg) {
       S.sidebarTimer = setInterval(() => {
         if (S.page !== 'messages') { clearInterval(S.sidebarTimer); S.sidebarTimer = null; return; }
         loadConversations();
-      }, 3000);
+      }, 8000);
     }
   }
   if (pg === 'create-profile' && S.user) {
@@ -663,12 +663,15 @@ async function openConversation(userId, name) {
   await fetchMessages(userId);
   loadConversations();
 
-  // Poll every 1s for new messages
+  // Poll every 2s for messages only — conversations update separately at 5s
+  let _pollCount = 0;
   S.pollTimer = setInterval(async () => {
     if (S.activeConv !== userId || S.page !== 'messages') { stopPolling(); return; }
     await fetchMessagesSilent(userId);
-    loadConversations();
-  }, 1000);
+    _pollCount++;
+    // Only refresh conversation list every 5th tick (every 10s) to avoid flooding
+    if (_pollCount % 5 === 0) loadConversations();
+  }, 2000);
 }
 
 function stopPolling() {
@@ -731,18 +734,24 @@ function copyMsgText(msgId) {
 }
 
 async function fetchMessages(userId) {
+  _fetchLock = false; // force-release lock so this full fetch always runs
   const body = document.getElementById('msg-body');
   if (!body) return;
   try {
+    _fetchLock = true;
     const msgs = await api('GET', '/api/messages?with=' + userId);
     renderMessages(msgs || [], body);
   } catch {}
+  finally { _fetchLock = false; }
 }
 
 // Silent version: only re-renders if message count changed (avoids flicker while typing)
+let _fetchLock = false;
 async function fetchMessagesSilent(userId) {
+  if (_fetchLock) return;
+  _fetchLock = true;
   const body = document.getElementById('msg-body');
-  if (!body) return;
+  if (!body) { _fetchLock = false; return; }
   try {
     const msgs = await api('GET', '/api/messages?with=' + userId);
     const list = msgs || [];
@@ -770,6 +779,7 @@ async function fetchMessagesSilent(userId) {
       });
     }
   } catch {}
+  finally { _fetchLock = false; }
 }
 
 async function sendMsg(userId) {
@@ -790,7 +800,7 @@ async function sendMsg(userId) {
 
   try {
     await api('POST', '/api/messages', {receiver_id: userId, content});
-    fetchMessages(userId); loadConversations();
+    fetchMessages(userId);
   } catch(e) {
     const temp = document.getElementById('msg-sending-temp');
     if (temp) temp.remove();
@@ -802,7 +812,6 @@ async function deleteMessage(msgId) {
   try {
     await api('DELETE', '/api/messages/' + msgId);
     if (S.activeConv) fetchMessages(S.activeConv);
-    loadConversations();
   } catch(e) { showToast('Could not unsend: ' + e.message); }
 }
 
