@@ -162,6 +162,7 @@ type Message struct {
 	Content    string `json:"content"`
 	CreatedAt  string `json:"created_at"`
 	SenderName string `json:"sender_name"`
+	IsRead     bool   `json:"is_read"`
 }
 
 type Session struct {
@@ -520,7 +521,19 @@ func handleMessages(w http.ResponseWriter, r *http.Request) {
 		if msgs == nil {
 			msgs = []Message{}
 		}
-
+		// Check if the other person has read each of our messages
+		var lastRead time.Time
+		db.QueryRow("SELECT last_read FROM message_reads WHERE user_id=? AND other_id=?",
+			withID, userID).Scan(&lastRead)
+		for i := range msgs {
+			if msgs[i].SenderID == userID && !lastRead.IsZero() {
+				msgTime, err := time.Parse("2006-01-02T15:04:05Z", msgs[i].CreatedAt)
+				if err != nil {
+					msgTime, _ = time.Parse("2006-01-02 15:04:05", msgs[i].CreatedAt)
+				}
+				msgs[i].IsRead = lastRead.After(msgTime)
+			}
+		}
 		// Mark conversation as read — upsert into message_reads
 		if withID > 0 {
 			db.Exec(`INSERT INTO message_reads(user_id, other_id, last_read) VALUES(?,?,?)

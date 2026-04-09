@@ -672,12 +672,17 @@ function renderMessages(msgs, body) {
   if (!msgs || !Array.isArray(msgs)) return;
   body.innerHTML = msgs.map(m => {
     const isMe = m.sender_id === S.user.id;
+    const tick = isMe
+      ? (m.is_read
+          ? '<span style="color:#5DCAA5;font-size:.65rem;margin-left:3px">&#10003;&#10003;</span>'
+          : '<span style="color:rgba(255,255,255,.45);font-size:.65rem;margin-left:3px">&#10003;</span>')
+      : '';
     return '<div class="msg-bubble-row ' + (isMe ? 'me' : '') + '" data-msg-id="' + m.id + '"'
       + ' ondblclick="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ')"'
       + ' oncontextmenu="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ');return false;">'
       + '<div class="msg-bubble ' + (isMe ? 'me' : 'them') + '">'
       + m.content
-      + '<div class="msg-time">' + new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + '</div>'
+      + '<div class="msg-time">' + new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + tick + '</div>'
       + '</div></div>';
   }).join('');
   body.scrollTop = body.scrollHeight;
