@@ -8,9 +8,9 @@
 
 ## What is Skill Swap?
 
-Skill Swap is a full-stack web application that lets people exchange skills with each other for free. Instead of paying for lessons, users list what they can teach and what they want to learn, then connect with others who complement their skillset. If I know Python and want to learn guitar, I find someone who teaches guitar and wants to learn Python — and we swap. No money involved, just knowledge.
+Skill Swap is a full-stack web-based website where you are able to trade your skills with one another without spending anything. Rather than having to pay for classes, users simply create a profile listing what they are able to teach and what they would like to learn, and then get connected to users whose interests match theirs. For example, if I am familiar with Python but want to learn how to play the guitar, I will look up someone who teaches guitar but wants to learn Python — we trade knowledge, no cash exchanged.
 
-I wanted to build something that felt like a real platform people could actually use — not just a basic CRUD app. So it includes real-time messaging, session scheduling, a star rating system, user moderation tools, and a full admin panel. The entire project runs as a single binary, deployed on Fly.io with persistent storage.
+This was my first time building an actual website rather than a simple CRUD app. It had to include many features including real-time messaging, session scheduling, user ratings (stars), moderation, and a complete admin panel. The entire project is compiled into a single executable which runs on Fly.io with persistent data storage.
 
 ---
 
@@ -18,29 +18,27 @@ I wanted to build something that felt like a real platform people could actually
 
 ### Backend — Go (Golang)
 
-Go was chosen for the backend because of its speed, simplicity, and powerful standard library. The entire server runs on Go's built-in `net/http` package — no frameworks.
+The backend is implemented in Go due to its performance, simplicity, and the strength of its standard library — particularly the built-in `net/http` package. No framework is used.
 
 - **Language:** Go 1.22
-- **Database:** SQLite via the `go-sqlite3` driver — zero setup, the database is a single file (`skillswap.db`) created automatically on first run
-- **Authentication:** Session-based auth using HTTP cookies — on login the server generates a secure token, stores it in the `auth_tokens` table, and sends it as a cookie; every subsequent request is verified against that token
-- **Password security:** All passwords are hashed with `bcrypt` before storage — plain-text passwords are never saved at any point
-- **File uploads:** Profile photos are sent as base64 from the browser, decoded server-side, and saved as `.jpg` files in `static/avatars/` — only the file path is stored in the database, keeping it small and fast
-- **REST API:** All frontend–backend communication goes through a clean JSON API (`/api/...` routes)
-- **Email:** Password reset emails are sent via Resend (`api.resend.com`) — the API key is stored as a Fly.io environment secret, never in the codebase
+- **Database:** SQLite via the `go-sqlite3` driver — requires zero setup. The database is a single file (`skillswap.db`) that creates itself when the application runs for the first time.
+- **Authentication:** Authenticated users have their session managed by an HTTP cookie. When a user logs in, the server generates a secure token, stores it in the `auth_tokens` table, and sends it back as a cookie. Any subsequent requests must present this token to authenticate.
+- **Password security:** Plain-text passwords are never stored anywhere. All passwords are hashed with `bcrypt` before being saved to the database.
+- **File uploads:** Client-side profile images are base64-encoded and transmitted to the server, where they are decoded, saved as `.jpg` files in `static/avatars/`, and only the file path is stored in the database — keeping the data size low to help performance.
+- **REST API:** All interactions between the frontend and backend go through a REST API (`/api/...` routes).
+- **Email:** Password reset emails are sent via Resend using a verified custom domain (`skillswapfly.quest`). The API key is stored as a Fly.io environment secret and never appears in the codebase.
 
 ### Frontend — Vanilla HTML, CSS, JavaScript
 
-The entire frontend was built without any framework — no React, Vue, or similar. This was a deliberate choice to understand the fundamentals properly.
+The whole frontend has been built without using any framework such as React or Vue. I chose to do this because I wanted to get down to the basics first so I could develop a proper understanding of how the building blocks of a web app work together.
 
-- **HTML:** One file (`index.html`) — different pages are `<div>` elements toggled with JavaScript; navigation never reloads the page, making it a true single-page application (SPA)
-- **CSS:** Custom design system with CSS variables (design tokens) for colours, spacing, and typography — fully responsive across desktop, tablet, and mobile with a hamburger navigation menu on small screens
-- **JavaScript:** All frontend logic in one file (`main.js`) — state management, API calls, DOM rendering, and real-time polling
-- **State management:** A single global object `S` holds all runtime state — the logged-in user, active page, open conversation, skill tags, filters, etc.
-- **Real-time messaging:** The messages page polls the server every 2 seconds for new messages with a concurrency lock to prevent overlapping requests — this gives a real-time feel with simple, reliable code
+- **HTML:** There is only one file called `index.html`. Each "page" in the app is made up of `<div>` elements which are toggled by JavaScript when you navigate. Because there is no full page refresh, it is technically a Single Page Application (SPA).
+- **CSS:** A custom design system with CSS variables (design tokens) has been implemented for colour, spacing, and typography. The CSS is written to be responsive and works well across desktop, tablet, and mobile. On smaller screens a hamburger navigation menu appears.
+- **JavaScript:** All frontend logic lives in `main.js` — state management, API calls, DOM rendering, real-time polling, and everything else.
 
 ### Deployment — Docker
 
-The project includes a multi-stage Dockerfile that compiles the Go binary in a builder container and runs it in a minimal Alpine Linux image. This keeps the final image small and makes the app deployable to any cloud platform that supports Docker (Railway, Fly.io, Render, etc.).
+The application uses a multi-stage Dockerfile which compiles the Go binary in a builder container and runs it from a minimal Alpine Linux image. The result is a small final image that can be deployed on any cloud service that supports Docker.
 
 ---
 
@@ -48,79 +46,78 @@ The project includes a multi-stage Dockerfile that compiles the Go binary in a b
 
 ### User Accounts
 
-- Register and sign in with email and password
-- Email format validation on registration
-- Profile photo upload
-- Bio, location, and preferred session type (Video Call / In-Person / Both)
+- Sign up and log in using an email address and password
+- Email format is validated on registration
+- Upload a profile photo
+- Enter bio, location, and preferred session type (Video Call / In-Person / Both)
 - Add and remove skills you can teach and skills you want to learn
-- Delete your own account permanently
+- Completely delete your account
 
-### Browse
+### Browse & Filter Users
 
-- See all users with their skills, star rating, swap count, location, and session preference
-- Search by skill or name
-- Filter by: All Matches, Suggested (based on skill overlap with your profile), Online Now, Video Calls, In-Person
-- Online status indicator — a green dot appears if the user was active in the last 10 minutes
-- Your own profile is hidden from your browse view
+- View all users' profiles, ratings, swap counts, locations, and preferred session types
+- Search by a specific skill or name
+- Filter by: All Matches, Suggested (based on skill overlap), Online Now, Video Calls, In-Person
+- A green dot appears next to a user's name if they were actively logged in within the last 10 minutes
+- Your own profile is never shown to you while browsing
 
 ### Messaging
 
-### Sessions
+- Real-time style chat using polling (every 2 seconds with a concurrency lock)
+- Read receipts — ✓ sent, ✓✓ delivered (recipient is online), ✓✓ green when read
+- Optimistic send — messages appear instantly before the server confirms
+- Browser notifications when a new message arrives and the tab is in the background
+- In-app toast notification when a message arrives and you are on a different page
+- Unread message badge on the navigation link
+- Right-click or double-click any message bubble for options: Unsend or Copy
 
-- Schedule a skill swap session with any user — choose which skills to exchange, date, time, duration, and session type
-- **Video Call:** paste a Zoom / Google Meet / Teams link and the other person gets a "Join Video Call" button
-- **Recorded:** paste a recording link (Google Drive, YouTube, etc.) after the session — stored permanently so both people can always find it
+### Creating / Scheduling Sessions
+
+- Create a session with any other user, including: skills to trade, date, time, duration, and session type
+- **Video Call:** paste a Zoom / Google Meet / Teams link and the recipient gets a "Join Video Call" button
+- **Recorded:** paste a recording link after the session — stored permanently so both people can always access it
 - **In-Person:** no link required, just date, time, and an optional agenda
-- Session dates are validated — past dates cannot be selected
-- The receiver gets a notification badge and can Confirm, Decline, or Suggest a New Time
-- The sender can Edit the time or Cancel at any point
-- Swap count increments automatically for both users when a session is confirmed
-- The rating form only appears after the session end time has actually passed
+- Past dates are blocked — you cannot schedule a session in the past
+- The recipient gets a notification badge and can Confirm, Decline, or Suggest a New Time
+- Either party can edit the time or cancel before the session starts
+- Both users' swap counts increase automatically when a session is confirmed
+- The rating form only appears after the scheduled end time of the session has passed
 
 ### Rating System
 
 - 1–5 star rating with emoji labels (Poor / Fair / OK / Good / Excellent)
-- Hover to preview, click to select — a Submit button then appears
-- Confirmation dialog before saving so accidental clicks do not count
-- Each user's average rating recalculates automatically across all their sessions
+- Hover to preview and click to select — a Submit button then appears
+- A confirmation dialog must be accepted before saving, so accidental clicks don't count
+- Each user's average rating recalculates automatically after every completed session
 
 ### Admin System
 
 - Admin users see an Admin link in the navigation
-- Admin panel displays live stats (total users, real users, banned count)
-- Search and filter through all registered users
-- **View any profile** — admin action buttons appear at the bottom of the profile modal
-- **Ban** — kicks the user out immediately (all tokens deleted) and hides them from browse
+- Live stats are displayed on the admin panel (total users, real users, banned count)
+- All registered users can be searched and filtered
+- Any user's profile can be viewed — admin action buttons appear at the bottom of the modal
+- **Ban** — removes the user immediately (all tokens deleted), hidden from browse
 - **Unban** — restores full access
-- **Warn** — sends a custom warning message directly to the user's inbox via a dedicated modal
+- **Warn** — sends a custom warning message directly to the user's inbox via a modal
 - **Make Admin** — promotes another user to admin
-- **Delete** — permanently removes the user and all their data with double confirmation
+- **Delete** — permanently removes the user and all their data, requires double confirmation
 
 ### Password Reset
 
-- "Forgot password?" link on the sign-in form
-- User enters their email and receives a reset link via email
-- Powered by Resend via skillswapfly.quest — a secure token is generated, stored with a 1-hour expiry, and emailed to the user
-- Clicking the link opens a reset page where the user sets a new password
-- Token is deleted and all existing sessions are invalidated after a successful reset
-- Always returns a success message regardless of whether the email exists, so registered emails are never revealed
-
-### Messaging
-
-- Real-time style chat using polling (1-second interval)
-- **Read receipts** — ✓ sent, ✓✓ delivered (recipient is online), ✓✓ green when read
-- Optimistic message sending — message appears instantly before server confirmation
-- Browser notifications when a new message arrives and the tab is in the background
-- Unread message badge on the navigation link
-- Right-click or double-click any message bubble for options: Unsend or Copy
-- Delete entire conversations from the sidebar
+- "Forgot your password?" link on the sign-in form
+- User enters the email address they used to register
+- A secure token is generated and stored with a 1-hour expiry
+- A reset link is emailed to the user via Resend
+- Clicking the link opens a page where the user sets a new password
+- After resetting, the token is deleted and all existing sessions are invalidated
+- Always returns a success message regardless of whether the email exists — registered addresses are never revealed
 
 ---
 
 ## Project Structure
 
 ```
-Skill-Swap/
+Skill-Swap1/
 ├── main.go              # All backend logic — routes, handlers, database schema
 ├── skillswap.db         # SQLite database (auto-created on first run)
 ├── go.mod               # Go module definition
@@ -180,22 +177,22 @@ Then open `http://localhost:8080`.
 ## Design Decisions
 
 **Why no framework?**
-Using React or Vue would have hidden a lot of what is actually happening. Building everything from scratch meant genuinely understanding how HTTP, cookies, session state, DOM manipulation, and event-driven UI all work together. The result is also a much simpler codebase — one HTML file, one CSS file, one JS file — with no build step required.
+If I used a library like React or Vue, a lot of the actual implementation details would have been abstracted away. Because I built everything from scratch, I had to understand how HTTP requests and responses, cookies, session state, DOM manipulation, and event-driven UI components really interact with each other. This resulted in an extremely simple codebase — one HTML file, one CSS file, one JS file — with a very easy build process that doesn't require a separate build environment.
 
 **Why SQLite?**
-For a platform of this scale, SQLite is the right tool. There is no database server to install, configure, or maintain. The entire database is a single file that can be backed up, inspected, or reset instantly. Go's `go-sqlite3` driver provides full SQL support with foreign key constraints and efficient indexed queries.
+SQLite was the best choice for a platform at this level of complexity. It requires no installation, configuration, or maintenance of a database server. The database is simply a single file which can be easily backed up, viewed, or completely reset at any time. Go's `go-sqlite3` package provides full SQL capability including foreign key constraints and efficient indexed queries.
 
 **Why polling instead of WebSockets?**
-WebSockets require persistent connections and more complex server-side handling. Polling every 2 seconds with a concurrency lock is simple, stateless, and reliable — and at this scale the performance difference is imperceptible to users. The polling interval was chosen to feel instant while keeping server load minimal.
+WebSockets require a persistent connection on both ends and have their own server-side complexities. Polling every 2 seconds with a concurrency lock is simple, stateless, and reliable — and the performance difference compared to WebSockets is indistinguishable at the scale of this app. A 2-second polling interval feels instant while keeping server load minimal.
 
 **Why session-based auth instead of JWTs?**
-JWTs are stateless, which means you cannot invalidate them without extra infrastructure. Session tokens stored in the database can be deleted instantly — which is essential for features like banning a user (their session is revoked immediately) or logging out from all devices.
+Stateless JWTs cannot be invalidated by your application without additional supporting infrastructure. Because session tokens are stored in the database, they can be deleted in real time — which is necessary for features like banning a user (their session is removed immediately) or logging out from all devices.
 
 **Colour system:**
-Blue (`#2563EB`) is used as the primary action colour for all interactive elements — buttons, links, focus rings. The brand coral-red (`#C0392B`) is reserved only for the logo and identity, never for interactive elements. This separation prevents confusion between brand colour and actionable UI.
+Blue (`#2563EB`) is the primary action colour for all interactive elements (buttons, links, focus rings). The coral-red brand colour (`#C0392B`) is only used for branding and identity — never for interactive elements. Keeping them separate helps prevent users from confusing branding with clickable UI.
 
 **Accessibility:**
-All interactive elements have visible focus styles for keyboard users. ARIA labels are applied to icon-only buttons. Modals move focus inside on open. Colour contrast ratios meet WCAG AA standards throughout.
+All interactive elements have visible focus styles for keyboard users. Icon-only buttons use ARIA labels. Modals move keyboard focus inside on open. All colour combinations meet WCAG AA contrast standards.
 
 ---
 
