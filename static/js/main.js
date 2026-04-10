@@ -242,9 +242,16 @@ function onLoggedIn() {
   refreshUnreadBadge();
   refreshSessionBadge();
   startSessionPolling();
+  startUnreadPolling();
   const heroCta = document.getElementById('hero-cta-btn');
   if (heroCta) heroCta.textContent = 'Edit Profile';
   requestNotifPermission();
+}
+
+function startUnreadPolling() {
+  setInterval(() => {
+    if (S.user && S.page !== 'messages') refreshUnreadBadge();
+  }, 10000);
 }
 
 function requestNotifPermission() {
@@ -553,7 +560,8 @@ function startMessage(userId, name) {
   setTimeout(() => openConversation(userId, name), 150);
 }
 
-// refreshUnreadBadge fetches conversations and updates the nav badge with total unread count
+let _lastUnreadCount = 0;
+
 async function refreshUnreadBadge() {
   if (!S.user) return;
   try {
@@ -561,6 +569,20 @@ async function refreshUnreadBadge() {
     const total = (convs||[]).reduce((sum, c) => sum + (c.unread || 0), 0);
     updateMsgBadge(total);
     if (convs && convs.length) renderConvList(convs);
+    // Notify if unread count increased
+    if (total > _lastUnreadCount) {
+      const newConvs = convs.filter(c => c.unread > 0);
+      if (newConvs.length > 0) {
+        const sender = newConvs[0].user.name;
+        const preview = newConvs[0].last_message || 'sent you a message';
+        if (document.hidden) {
+          showMsgNotification(sender, preview);
+        } else if (S.page !== 'messages') {
+          showToast('\uD83D\uDCAC ' + sender + ': ' + preview.slice(0, 60) + (preview.length > 60 ? '\u2026' : ''));
+        }
+      }
+    }
+    _lastUnreadCount = total;
   } catch {}
 }
 
