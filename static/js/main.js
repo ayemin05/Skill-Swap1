@@ -789,12 +789,19 @@ async function fetchMessagesSilent(userId) {
     if (list.length !== currentRows.length || statusChanged) {
       renderMessages(list, body);
     }
-    // Show browser notification for new incoming messages when tab is hidden
+    // Notify for new incoming messages
     if (list.length > currentRows.length) {
       const newMsgs = list.slice(currentRows.length);
       newMsgs.forEach(m => {
-        if (m.sender_id !== S.user.id && document.hidden) {
-          showMsgNotification(m.sender_name || 'Someone', m.content);
+        if (m.sender_id !== S.user.id) {
+          if (document.hidden) {
+            // Tab is hidden — use browser notification
+            showMsgNotification(m.sender_name || 'Someone', m.content);
+          } else if (S.page !== 'messages') {
+            // Tab is active but user is on a different page — show in-app toast
+            showToast('💬 ' + (m.sender_name || 'Someone') + ': ' + m.content.slice(0, 60) + (m.content.length > 60 ? '…' : ''));
+          }
+          // If already on messages page, the bubble appears automatically — no toast needed
         }
       });
     }
