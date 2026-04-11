@@ -67,12 +67,11 @@ async function init() {
     onLoggedIn();
   } catch { /* no session — guest mode */ }
 
-  // Default the schedule date to tomorrow
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = tomorrow.toISOString().split('T')[0];
-  document.getElementById('sched-date').value = tomorrowStr;
-  document.getElementById('sched-date').min   = tomorrowStr;
+  // Default the schedule date to today
+  const today = new Date();
+  const todayStr = today.toISOString().split('T')[0];
+  document.getElementById('sched-date').value = todayStr;
+  document.getElementById('sched-date').min   = todayStr;
 
   loadUsers();
 }
