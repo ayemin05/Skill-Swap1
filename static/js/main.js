@@ -37,6 +37,7 @@ let _sessionsCache = null;
 let _sessionsCacheTime = 0;
 let _sessionBadgeTimer = null;
 let _lastSessionStates = {};
+let _lastUnreadCount = 0;
 
 // API helper
 // All API calls go through here. It adds JSON headers and throws on error responses.
@@ -66,11 +67,12 @@ async function init() {
     onLoggedIn();
   } catch { /* no session — guest mode */ }
 
-  // Default the schedule date to today
-  const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
-  document.getElementById('sched-date').value = todayStr;
-  document.getElementById('sched-date').min   = todayStr;
+  // Default the schedule date to tomorrow
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowStr = tomorrow.toISOString().split('T')[0];
+  document.getElementById('sched-date').value = tomorrowStr;
+  document.getElementById('sched-date').min   = tomorrowStr;
 
   loadUsers();
 }
@@ -265,13 +267,14 @@ function showMsgNotification(senderName, content) {
       body: content.length > 80 ? content.slice(0, 80) + '…' : content,
       icon: '/static/avatars/user-3.jpg'
     });
-    n.onclick = () => { window.focus(); showPage('sessions'); n.close(); };
+    n.onclick = () => { window.focus(); showPage('messages'); n.close(); };
   }
 }
 
 async function doLogout() {
   _usersCache = null; _usersCacheTime = 0;
   _sessionsCache = null; _sessionsCacheTime = 0;
+  _lastUnreadCount = 0;
   stopSessionPolling();
   try { await api('POST', '/api/logout'); } catch {}
   S.user = null;
@@ -559,8 +562,7 @@ function startMessage(userId, name) {
   setTimeout(() => openConversation(userId, name), 150);
 }
 
-let _lastUnreadCount = 0;
-
+// refreshUnreadBadge fetches conversations and updates the nav badge with total unread count
 async function refreshUnreadBadge() {
   if (!S.user) return;
   try {
@@ -810,19 +812,12 @@ async function fetchMessagesSilent(userId) {
     if (list.length !== currentRows.length || statusChanged) {
       renderMessages(list, body);
     }
-    // Notify for new incoming messages
+    // Show browser notification for new incoming messages when tab is hidden
     if (list.length > currentRows.length) {
       const newMsgs = list.slice(currentRows.length);
       newMsgs.forEach(m => {
-        if (m.sender_id !== S.user.id) {
-          if (document.hidden) {
-            // Tab is hidden — use browser notification
-            showMsgNotification(m.sender_name || 'Someone', m.content);
-          } else if (S.page !== 'messages') {
-            // Tab is active but user is on a different page — show in-app toast
-            showToast('💬 ' + (m.sender_name || 'Someone') + ': ' + m.content.slice(0, 60) + (m.content.length > 60 ? '…' : ''));
-          }
-          // If already on messages page, the bubble appears automatically — no toast needed
+        if (m.sender_id !== S.user.id && document.hidden) {
+          showMsgNotification(m.sender_name || 'Someone', m.content);
         }
       });
     }
@@ -1266,6 +1261,16 @@ function startSessionPolling() {
         _lastSessionStates[s.id] = s.status;
       });
 
+      // Also check if any confirmed session has just passed its end time
+      // This makes the rating form appear automatically without a manual refresh
+      const now = new Date();
+      sessions.forEach(s => {
+        if (s.status === 'confirmed' && s.date && s.time) {
+          const endDt = new Date(new Date(s.date + 'T' + s.time).getTime() + (s.duration || 60) * 60000);
+          if (endDt < now) somethingChanged = true;
+        }
+      });
+
       // Refresh sessions page immediately if anything changed
       if (somethingChanged && S.page === 'sessions') {
         renderSessions(sessions);
@@ -1403,7 +1408,7 @@ async function adminAction(action, userId, name) {
   } catch(e) { showToast('Error: ' + e.message); }
 }
 
-// Delete account 
+// Delete account
 async function deleteAccount() {
   if (!confirm('Are you sure you want to delete your account? This cannot be undone.')) return;
   if (!confirm('Last chance \u2014 this will permanently delete your profile, messages and sessions.')) return;
