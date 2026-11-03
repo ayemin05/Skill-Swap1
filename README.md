@@ -1,3 +1,17 @@
+# Peerly (formerly Skill Swap)
+
+**Learn together. Grow together.** Peerly turns Skill Swap into a community: people make friends, join groups, post in a feed and still swap skills 1-to-1. It starts with Myanmar people around the world, then grows globally.
+
+### New in the Peerly upgrade
+- **Community feed** — text + photo posts, likes, comments, "Everyone" / "My groups" tabs (`community.go`, `static/js/community.js`)
+- **Groups** — 8 starter groups (Burmese in Finland, Burmese Worldwide, English Learners, Tech & Coding, …), join/leave, create your own, group pages
+- **Welcome flow** — sign up → profile → pick groups → feed
+- **English / Burmese toggle** — all new screens and the main navigation (`static/js/i18n.js`)
+- **Mobile bottom tab bar**, new jade + saffron brand (`static/css/peerly.css`)
+- **Fixes** — random session tokens (were timestamp-based), uploads saved on the Fly volume (`/app/data/uploads`) so photos survive redeploys, image type checks
+
+---
+
 # Skill Swap – Peer-to-Peer Skill Exchange Platform
 
 ## Live Demo

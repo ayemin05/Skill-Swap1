@@ -159,6 +159,7 @@ type User struct {
 	IsOnline    bool     `json:"is_online"`
 	IsAdmin     bool     `json:"is_admin"`
 	IsBanned    bool     `json:"is_banned"`
+	Onboarded   bool     `json:"onboarded"`
 	Teach       []string `json:"teach"`
 	Learn       []string `json:"learn"`
 	CreatedAt   string   `json:"created_at"`
@@ -199,10 +200,15 @@ type Session struct {
 
 // Auth helpers
 
-// generateToken makes a simple unique token from the current timestamp.
-// In production you'd want crypto/rand but this works fine for a project.
+// generateToken makes a random session token.
 func generateToken() string {
-	return fmt.Sprintf("%d-%d", time.Now().UnixNano(), time.Now().Unix())
+	// Random 256-bit token — a timestamp-based token could be guessed by an attacker
+	return generateSecureToken()
+}
+
+// decodeJSON reads a JSON request body into v.
+func decodeJSON(r *http.Request, v interface{}) error {
+	return json.NewDecoder(r.Body).Decode(v)
 }
 
 // getUserFromToken checks the session cookie (or Authorization header) and
@@ -271,10 +277,10 @@ func loadUser(userID int) (*User, error) {
 		SELECT id, name, email, bio, avatar, swaps, rating,
 		       location, session_pref,
 		       COALESCE(is_admin,0), COALESCE(is_banned,0),
-		       created_at
+		       COALESCE(onboarded,0), created_at
 		FROM users WHERE id = ?`, userID,
 	).Scan(&u.ID, &u.Name, &u.Email, &u.Bio, &u.Avatar, &u.Swaps, &u.Rating,
-		&u.Location, &u.SessionPref, &u.IsAdmin, &u.IsBanned, &u.CreatedAt)
+		&u.Location, &u.SessionPref, &u.IsAdmin, &u.IsBanned, &u.Onboarded, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -870,17 +876,21 @@ func handleUploadAvatar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Save the file as user-{id}.jpg, overwriting any previous photo
-	avatarDir := filepath.Join(".", "static", "avatars")
-	os.MkdirAll(avatarDir, 0755)
-	filename := fmt.Sprintf("user-%d.jpg", userID)
-	if err := os.WriteFile(filepath.Join(avatarDir, filename), imgBytes, 0644); err != nil {
+	if ct := http.DetectContentType(imgBytes); !strings.HasPrefix(ct, "image/") {
+		jsonError(w, "Please upload an image file", http.StatusBadRequest)
+		return
+	}
+
+	// Save as avatar-{id}.jpg in the upload folder. On Fly.io that folder is on the
+	// persistent volume, so photos are no longer lost when the app is redeployed.
+	filename := fmt.Sprintf("avatar-%d.jpg", userID)
+	if err := os.WriteFile(filepath.Join(uploadDir, filename), imgBytes, 0644); err != nil {
 		jsonError(w, "Could not save photo", http.StatusInternalServerError)
 		return
 	}
 
 	// Return the URL with a timestamp to bust the browser cache when photo changes
-	urlPath := fmt.Sprintf("/static/avatars/%s?t=%d", filename, time.Now().Unix())
+	urlPath := fmt.Sprintf("/uploads/%s?t=%d", filename, time.Now().Unix())
 	jsonOK(w, map[string]string{"url": urlPath})
 }
 
@@ -984,6 +994,7 @@ func handleAdminAction(w http.ResponseWriter, r *http.Request) {
 
 	case "delete":
 		// Delete everything belonging to this user, in dependency order
+		deleteCommunityData(body.UserID)
 		db.Exec("DELETE FROM sessions  WHERE requester_id=? OR partner_id=?", body.UserID, body.UserID)
 		db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?", body.UserID, body.UserID)
 		db.Exec("DELETE FROM skills    WHERE user_id=?", body.UserID)
@@ -1065,6 +1076,7 @@ func handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Clean up all data belonging to this user before deleting the user row
+	deleteCommunityData(userID)
 	db.Exec("DELETE FROM sessions  WHERE requester_id=? OR partner_id=?", userID, userID)
 	db.Exec("DELETE FROM messages  WHERE sender_id=? OR receiver_id=?", userID, userID)
 	db.Exec("DELETE FROM skills    WHERE user_id=?", userID)
@@ -1158,7 +1170,7 @@ func seedDB() {
 func seedBotWelcome(newUserID int) {
 	time.Sleep(2 * time.Second)
 	welcomes := map[string]string{
-		"sarah@skillswap.demo": "Hey! Welcome to Skill Swap 👋 I'm Sarah. I teach Python and web development — feel free to reach out if you'd like to swap skills!",
+		"sarah@skillswap.demo": "Hey! Welcome to Peerly 👋 I'm Sarah. I teach Python and web development — feel free to reach out if you'd like to swap skills!",
 		"alex@skillswap.demo":  "Welcome! I'm Alex 🎸 I teach guitar and music theory. Would love to do a skill exchange if you're interested!",
 	}
 	for email, msg := range welcomes {
@@ -1187,17 +1199,17 @@ func sendResetEmail(toEmail, resetURL string) error {
 	}
 
 	htmlBody := `<div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px">
-		<h2 style="color:#C0392B;font-family:Georgia,serif">Skill Swap</h2>
+		<h2 style="color:#0F766E;font-family:Georgia,serif">Peerly</h2>
 		<p>Hi! You requested a password reset.</p>
 		<p>Click the button below to set a new password. This link expires in 1 hour.</p>
-		<a href="` + resetURL + `" style="display:inline-block;background:#2563EB;color:#fff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;margin:16px 0">Reset Password</a>
+		<a href="` + resetURL + `" style="display:inline-block;background:#0F766E;color:#fff;text-decoration:none;padding:12px 28px;border-radius:999px;font-weight:600;margin:16px 0">Reset Password</a>
 		<p style="color:#6B7280;font-size:.85rem">If you did not request this, you can safely ignore this email.</p>
 	</div>`
 
 	payload := map[string]interface{}{
-		"from":    "Skill Swap <noreply@skillswapfly.quest>",
+		"from":    "Peerly <noreply@skillswapfly.quest>",
 		"to":      []string{toEmail},
-		"subject": "Reset your Skill Swap password",
+		"subject": "Reset your Peerly password",
 		"html":    htmlBody,
 	}
 	body, _ := json.Marshal(payload)
@@ -1316,6 +1328,8 @@ func handleResetPassword(w http.ResponseWriter, r *http.Request) {
 func main() {
 	initDB()
 	seedDB()
+	initUploads()
+	initCommunityDB()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -1343,6 +1357,17 @@ func main() {
 	http.HandleFunc("/api/admin/users", handleAdminUsers)
 	http.HandleFunc("/api/admin/action", handleAdminAction)
 
+	// Peerly community
+	http.HandleFunc("/api/feed", handleFeed)
+	http.HandleFunc("/api/posts", handleCreatePost)
+	http.HandleFunc("/api/posts/", handlePostRoutes)
+	http.HandleFunc("/api/comments/", handleCommentRoutes)
+	http.HandleFunc("/api/groups", handleGroups)
+	http.HandleFunc("/api/groups/", handleGroupRoutes)
+	http.HandleFunc("/api/onboarded", handleOnboarded)
+	http.HandleFunc("/api/stats", handleStats)
+	http.Handle("/uploads/", uploadsHandler())
+
 	// Serve static files (HTML, CSS, JS, avatar images) with no-cache headers
 	http.Handle("/static/", http.StripPrefix("/static/",
 		noCacheFileServer(http.Dir("./static"))))
@@ -1356,6 +1381,6 @@ func main() {
 		http.ServeFile(w, r, "./static/index.html")
 	})
 
-	log.Printf("Skill Swap running at http://localhost:%s", port)
+	log.Printf("Peerly running at http://localhost:%s", port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }

@@ -2,44 +2,46 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="description" content="Skill Swap – a peer-to-peer platform to exchange skills."/>
-  <meta property="og:title" content="Skill Swap – Learn by Teaching, Teach by Learning"/>
-  <meta property="og:description" content="Exchange skills peer-to-peer. No money, just knowledge."/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <meta name="theme-color" content="#0F766E"/>
+  <meta name="description" content="Peerly – a friendly community to make friends, learn together and swap skills. Starting with Myanmar people around the world."/>
+  <meta property="og:title" content="Peerly – Learn together. Grow together."/>
+  <meta property="og:description" content="Make friends, join groups, learn together and swap skills — free."/>
   <meta property="og:type" content="website"/>
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><rect x='2' y='2' width='22' height='16' rx='5' fill='%232563EB'/><polygon points='4,18 13,18 4,26' fill='%232563EB'/><rect x='16' y='21' width='22' height='16' rx='5' fill='%23C0392B'/><polygon points='36,37 27,37 36,45' fill='%23C0392B'/></svg>"/>
-  <title>Skill Swap – Learn by Teaching, Teach by Learning</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><circle cx='15' cy='20' r='11' fill='%230F766E'/><circle cx='25' cy='20' r='11' fill='%23F59E0B' fill-opacity='.9'/></svg>"/>
+  <title>Peerly – Learn together. Grow together.</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet"/>
-  <link rel="stylesheet" href="/static/css/style.css?v=7"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Myanmar:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/static/css/style.css?v=8"/>
+  <link rel="stylesheet" href="/static/css/peerly.css?v=2"/>
 </head>
 <body>
 
 <!--  NAV-->
 <nav>
   <div class="nav-inner">
-    <div class="logo" onclick="showPage('home')">
-      <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <rect x="2" y="2" width="22" height="16" rx="5" fill="#2563EB"/>
-        <polygon points="4,18 13,18 4,26" fill="#2563EB"/>
-        <rect x="16" y="21" width="22" height="16" rx="5" fill="#C0392B"/>
-        <polygon points="36,37 27,37 36,45" fill="#C0392B"/>
-        <path d="M8 10h10M15 7.5l2.5 2.5L15 12.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-        <path d="M32 29H22M25 26.5l-2.5 2.5 2.5 2.5" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+    <div class="logo" onclick="goHome()">
+      <svg class="logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="15" cy="20" r="11" fill="#0F766E"/>
+        <circle cx="25" cy="20" r="11" fill="#F59E0B" fill-opacity=".92"/>
+        <circle cx="12.5" cy="17.5" r="1.6" fill="#fff"/><circle cx="27.5" cy="17.5" r="1.6" fill="#fff"/>
+        <path d="M15 24.5c3 2.4 7 2.4 10 0" stroke="#fff" stroke-width="1.8" stroke-linecap="round"/>
       </svg>
-      <span class="logo-wordmark">Skill Swap</span>
+      <span class="logo-wordmark">Peerly</span>
     </div>
     <div class="nav-links" id="nav-links">
-      <a onclick="showPage('home')">Home</a>
-      <a onclick="showPage('browse')">Browse</a>
-      <a id="nav-msg-link"      style="display:none" onclick="showPage('messages')">Message</a>
-      <a id="nav-sessions-link" style="display:none" onclick="showPage('sessions')">Sessions</a>
-      <a id="nav-admin-link"    style="display:none" onclick="showPage('admin')">Admin</a>
-      <button id="nav-getstarted-btn" class="nav-btn btn-nav-primary" onclick="openAuthModal('register')">Get Started</button>
-      <button id="nav-back-btn"       class="nav-btn btn-nav-outline" style="display:none" onclick="goBack()">Back</button>
-      <button id="nav-profile-btn"    class="nav-btn btn-nav-soft"    style="display:none" onclick="showPage('create-profile')">My Profile</button>
-      <button id="nav-logout-btn"     class="nav-btn btn-nav-outline" style="display:none" onclick="doLogout()">Log Out</button>
+      <a id="nav-home-link" onclick="goHome()" data-i18n="nav.home">Home</a>
+      <a onclick="showPage('groups')" data-i18n="nav.groups">Groups</a>
+      <a onclick="showPage('browse')" data-i18n="nav.people">People</a>
+      <a id="nav-msg-link"      style="display:none" onclick="showPage('messages')" data-i18n="nav.messages">Messages</a>
+      <a id="nav-sessions-link" style="display:none" onclick="showPage('sessions')" data-i18n="nav.sessions">Sessions</a>
+      <a id="nav-admin-link"    style="display:none" onclick="showPage('admin')" data-i18n="nav.admin">Admin</a>
+      <button class="lang-btn" onclick="toggleLang()" aria-label="Switch language"><span data-i18n="nav.lang">မြန်မာ</span></button>
+      <button id="nav-getstarted-btn" class="nav-btn btn-nav-primary" onclick="openAuthModal('register')" data-i18n="nav.join">Join free</button>
+      <button id="nav-back-btn"       class="nav-btn btn-nav-outline" style="display:none" onclick="goBack()" data-i18n="nav.back">Back</button>
+      <button id="nav-profile-btn"    class="nav-btn btn-nav-soft"    style="display:none" onclick="showPage('create-profile')" data-i18n="nav.profile">My Profile</button>
+      <button id="nav-logout-btn"     class="nav-btn btn-nav-outline" style="display:none" onclick="doLogout()" data-i18n="nav.logout">Log Out</button>
     </div>
     <button class="hamburger" id="hamburger-btn" onclick="toggleMobileMenu()" aria-label="Open navigation menu">
       <span></span><span></span><span></span>
@@ -47,60 +49,126 @@
   </div>
 </nav>
 
-<!-- HOME  -->
+<!-- HOME (landing page for guests) -->
 <div id="page-home" class="page active">
-  <section class="hero">
-    <h1>Learn by Teaching,<br/>Teach by Learning</h1>
-    <p>Connect with students and hobbyists to swap skills.<br/>No money, just knowledge exchange.</p>
-    <div class="hero-search">
-      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-      </svg>
-      <input type="text" id="hero-q" placeholder="What skill do you want to learn? (e.g., Guitar, Python, French…)" onkeydown="if(event.key==='Enter')heroSearch()"/>
+  <section class="hero p-hero">
+    <div class="p-hero-inner">
+      <span class="p-eyebrow" data-i18n="home.eyebrow">For Myanmar people everywhere — and soon, the world</span>
+      <h1 data-i18n="home.title">Make friends. Learn together. Swap skills.</h1>
+      <p data-i18n="home.sub">Peerly is a warm, free community where you meet people like you, join groups, ask questions and teach each other what you know.</p>
+      <div class="hero-btns">
+        <button class="btn-primary" id="hero-cta-btn" onclick="onGetStarted()" data-i18n="home.cta">Join Peerly — it's free</button>
+        <button class="btn-ghost" onclick="showPage('groups')" data-i18n="home.cta2">Explore groups</button>
+      </div>
+      <div class="p-stats" id="p-stats"></div>
     </div>
-    <div class="hero-btns">
-      <button class="btn-primary" id="hero-cta-btn" onclick="onGetStarted()">Create Profile</button>
-      <button class="btn-ghost"   onclick="showPage('browse')">Browse Skills</button>
+    <div class="p-hero-preview" aria-label="Latest posts from the community">
+      <div class="p-preview-label" data-i18n="home.live">Happening now on Peerly</div>
+      <div id="home-preview"></div>
     </div>
   </section>
 
   <section class="how-section">
     <div class="container">
-      <h2>How Skill Swap Works</h2>
+      <h2 data-i18n="home.how">What you can do on Peerly</h2>
       <div class="how-grid">
         <div class="how-card">
-          <div class="how-icon" style="background:#2563EB">👤</div>
-          <h3>Create Your Profile</h3>
-          <p>List the skills you can teach and the skills you want to learn. Build your knowledge portfolio and showcase your expertise.</p>
+          <div class="how-icon" style="background:#CCFBF1">📰</div>
+          <h3 data-i18n="how.feed.t">Share in the feed</h3>
+          <p data-i18n="how.feed.d">Post what you're learning, ask questions, share wins and photos. Like and comment on others' posts.</p>
         </div>
         <div class="how-card">
-          <div class="how-icon" style="background:#0891B2">🔍</div>
-          <h3>Find Your Match</h3>
-          <p>Browse users manually or get suggestions based on your interests. Connect with people who complement your skillset.</p>
+          <div class="how-icon" style="background:#FEF3C7">👥</div>
+          <h3 data-i18n="how.groups.t">Join groups</h3>
+          <p data-i18n="how.groups.d">Burmese in Finland, English learners, Tech &amp; coding and more — or start your own group.</p>
         </div>
         <div class="how-card">
-          <div class="how-icon" style="background:#7C3AED">💬</div>
-          <h3>Start Learning</h3>
-          <p>Exchange skills via video calls, in-person meetups, or recorded videos. Choose what works best for your schedule.</p>
+          <div class="how-icon" style="background:#E0E7FF">🤝</div>
+          <h3 data-i18n="how.swap.t">Swap skills 1-to-1</h3>
+          <p data-i18n="how.swap.d">Find someone who teaches what you want to learn, and teach them back. No money, just knowledge.</p>
         </div>
         <div class="how-card">
-          <div class="how-icon" style="background:#059669">📅</div>
-          <h3>Schedule Sessions</h3>
-          <p>Book sessions at times that work for both of you. Set agendas, share materials, and track your learning progress.</p>
+          <div class="how-icon" style="background:#FCE7F3">💬</div>
+          <h3 data-i18n="how.msg.t">Message &amp; make friends</h3>
+          <p data-i18n="how.msg.d">Chat privately with people you meet in groups. Friendships first, learning follows.</p>
         </div>
         <div class="how-card">
-          <div class="how-icon" style="background:#D97706">⭐</div>
-          <h3>Build Reputation</h3>
-          <p>Rate your experiences and receive reviews. Build trust in the community and showcase your teaching abilities.</p>
+          <div class="how-icon" style="background:#DCFCE7">📅</div>
+          <h3 data-i18n="how.sess.t">Schedule sessions</h3>
+          <p data-i18n="how.sess.d">Book video calls or meetups with an agenda, then rate each other to build trust.</p>
         </div>
         <div class="how-card">
-          <div class="how-icon" style="background:#C0392B">🌍</div>
-          <h3>Global Community</h3>
-          <p>Connect with learners and teachers worldwide. Break geographical barriers and access diverse perspectives.</p>
+          <div class="how-icon" style="background:#FFEDD5">🌏</div>
+          <h3 data-i18n="how.lang.t">English &amp; မြန်မာ</h3>
+          <p data-i18n="how.lang.d">Use Peerly in English or Burmese — switch any time from the menu.</p>
         </div>
       </div>
     </div>
   </section>
+</div>
+
+<!-- FEED (home for logged-in users) -->
+<div id="page-feed" class="page">
+  <div class="feed-layout">
+    <main class="feed-main">
+      <div class="composer" id="feed-composer"></div>
+      <div class="feed-tabs" role="tablist">
+        <button class="feed-tab active" data-scope="all" onclick="setFeedScope('all', this)" data-i18n="feed.all">Everyone</button>
+        <button class="feed-tab" data-scope="mine" onclick="setFeedScope('mine', this)" data-i18n="feed.mine">My groups</button>
+      </div>
+      <div id="feed-list"></div>
+      <button class="load-more" id="feed-more" style="display:none" onclick="loadFeed(true)" data-i18n="feed.more">Load more</button>
+    </main>
+    <aside class="feed-side">
+      <div class="side-card">
+        <div class="side-title"><span data-i18n="side.mygroups">Your groups</span><a onclick="showPage('groups')" data-i18n="side.all">See all</a></div>
+        <div id="side-groups"></div>
+      </div>
+      <div class="side-card">
+        <div class="side-title"><span data-i18n="side.people">People to meet</span><a onclick="showPage('browse')" data-i18n="side.all">See all</a></div>
+        <div id="side-people"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- GROUPS -->
+<div id="page-groups" class="page">
+  <div class="groups-header">
+    <div class="container">
+      <h1 data-i18n="groups.title">Groups</h1>
+      <p data-i18n="groups.sub">Find your people. Join a few groups to fill your feed.</p>
+      <button class="btn-primary" onclick="openCreateGroup()" data-i18n="groups.create">+ Create a group</button>
+    </div>
+  </div>
+  <div class="container groups-wrap">
+    <div class="groups-grid" id="groups-grid"><div class="spinner">Loading…</div></div>
+  </div>
+</div>
+
+<!-- SINGLE GROUP -->
+<div id="page-group" class="page">
+  <div class="group-hero" id="group-hero"></div>
+  <div class="feed-layout single">
+    <main class="feed-main">
+      <div class="composer" id="group-composer"></div>
+      <div id="group-feed"></div>
+      <button class="load-more" id="group-more" style="display:none" onclick="loadGroupFeed(true)" data-i18n="feed.more">Load more</button>
+    </main>
+  </div>
+</div>
+
+<!-- WELCOME / ONBOARDING (after sign-up) -->
+<div id="page-onboard" class="page">
+  <div class="profile-page">
+    <div class="profile-card onboard-card">
+      <div class="onboard-steps"><span class="done"></span><span class="done"></span><span class="on"></span></div>
+      <h2 data-i18n="onb.title">Join a few groups</h2>
+      <p class="sub" data-i18n="onb.sub">Pick at least one. Their posts will show in your feed — you can change this any time.</p>
+      <div class="onboard-groups" id="onboard-groups"></div>
+      <button class="btn-primary" id="onboard-done" onclick="finishOnboarding()" data-i18n="onb.done">Go to my feed</button>
+    </div>
+  </div>
 </div>
 
 <!-- PROFILE -->
@@ -108,22 +176,23 @@
   <div class="profile-page">
     <div class="profile-card">
       <h2 id="pf-title">Create Your Profile</h2>
-      <p class="sub" id="pf-sub">Tell us about yourself and your skills</p>
+      <div class="onboard-steps" id="pf-steps"><span class="done"></span><span class="on"></span><span></span></div>
+      <p class="sub" id="pf-sub" data-i18n="pf.sub">Tell people a little about you and what you can share</p>
       <label class="avatar-upload" for="av-input">
         <div class="avatar-circle" id="av-preview">📷</div>
-        <span>Click to upload photo</span>
+        <span data-i18n="pf.photo">Add a photo</span>
       </label>
       <input type="file" id="av-input" accept="image/*" style="display:none" onchange="previewAv(this)"/>
       <div class="form-group">
-        <label for="pf-name">Full name</label>
+        <label for="pf-name" data-i18n="pf.name">Name</label>
         <input type="text" id="pf-name" placeholder="Enter your name" autocomplete="name"/>
       </div>
       <div class="form-group">
-        <label for="pf-bio">Bio</label>
-        <textarea id="pf-bio" placeholder="Tell others about yourself, your interests, and what you are passionate about …"></textarea>
+        <label for="pf-bio" data-i18n="pf.bio">About you</label>
+        <textarea id="pf-bio" data-i18n-ph="pf.bio.ph" placeholder="Where you live, what you do, what you love …"></textarea>
       </div>
       <div class="form-group">
-        <label>Skills I can Teach</label>
+        <label data-i18n="pf.teach">Skills I can share</label>
         <div class="skill-input-row">
           <input type="text" id="teach-in" placeholder="e.g. Python, Guitar…" onkeydown="if(event.key==='Enter')addTag('teach')"/>
           <button class="add-btn" onclick="addTag('teach')">+ Add</button>
@@ -131,7 +200,7 @@
         <div class="tags-row" id="teach-tags"></div>
       </div>
       <div class="form-group">
-        <label>Skills I Want to Learn</label>
+        <label data-i18n="pf.learn">Skills I want to learn</label>
         <div class="skill-input-row">
           <input type="text" id="learn-in" placeholder="e.g. Spanish, React…" onkeydown="if(event.key==='Enter')addTag('learn')"/>
           <button class="add-btn" onclick="addTag('learn')">+ Add</button>
@@ -140,7 +209,7 @@
       </div>
 
       <div class="form-group">
-        <label>Preferred Session Type</label>
+        <label data-i18n="pf.pref">How do you like to meet?</label>
         <div class="pref-options">
           <label class="pref-option">
             <input type="radio" name="session_pref" id="pref-video"    value="video"     onchange="onPrefChange(this)"/>
@@ -162,7 +231,7 @@
         <input type="text" id="pf-location" placeholder="e.g. Helsinki, Finland" autocomplete="address-level2"/>
       </div>
 
-      <button class="btn-primary" id="pf-save-btn" onclick="saveProfile()">Save Profile &amp; Continue</button>
+      <button class="btn-primary" id="pf-save-btn" onclick="saveProfile()" data-i18n="pf.save">Save &amp; continue</button>
 
       <div class="danger-zone">
         <button class="btn-danger" onclick="deleteAccount()">🗑 Delete My Account</button>
@@ -176,24 +245,24 @@
 <div id="page-browse" class="page">
   <div class="browse-header">
     <div class="container">
-      <h1>Find Your Match</h1>
-      <p>Discover people who can teach what you want to learn</p>
+      <h1 data-i18n="br.title">Find people to learn with</h1>
+      <p data-i18n="br.sub">Discover people who can teach what you want to learn</p>
       <div class="browse-search">
         <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
-        <input type="text" id="browse-q" placeholder="Search by skill or name…" oninput="loadUsers()" onkeydown="if(event.key==='Enter')loadUsers()"/>
+        <input type="text" id="browse-q" data-i18n-ph="br.search" placeholder="Search by skill or name…" oninput="loadUsers()" onkeydown="if(event.key==='Enter')loadUsers()"/>
       </div>
     </div>
   </div>
   <div class="filter-row">
     <div class="container">
       <div class="filter-pills">
-        <button class="filter-btn active" onclick="setFilter('all',this)">All Matches</button>
-        <button class="filter-btn"        onclick="setFilter('suggested',this)">Suggested</button>
-        <button class="filter-btn"        onclick="setFilter('online',this)">Online Now</button>
-        <button class="filter-btn"        onclick="setFilter('video',this)">Video Calls</button>
-        <button class="filter-btn"        onclick="setFilter('in-person',this)">In-Person</button>
+        <button class="filter-btn active" onclick="setFilter('all',this)" data-i18n="br.all">Everyone</button>
+        <button class="filter-btn"        onclick="setFilter('suggested',this)" data-i18n="br.sugg">Suggested</button>
+        <button class="filter-btn"        onclick="setFilter('online',this)" data-i18n="br.online">Online Now</button>
+        <button class="filter-btn"        onclick="setFilter('video',this)" data-i18n="br.video">Video Calls</button>
+        <button class="filter-btn"        onclick="setFilter('in-person',this)" data-i18n="br.inperson">In-Person</button>
       </div>
     </div>
   </div>
@@ -210,7 +279,7 @@
 <div id="page-messages" class="page msg-page">
   <div class="msg-sidebar" id="msg-sidebar">
     <div class="msg-sidebar-header">
-      <h3>Messages</h3>
+      <h3 data-i18n="nav.messages">Messages</h3>
       <p style="font-size:.74rem;color:var(--gray);margin-top:4px">Hover a message to delete it.</p>
     </div>
     <div id="msg-conv-list">
@@ -231,7 +300,7 @@
     <div class="schedule-card">
       <h2>Schedule a Session</h2>
       <div class="session-info-box">
-        <h3 id="sched-title">Skill Swap</h3>
+        <h3 id="sched-title">Skill swap</h3>
         <p style="font-size:.82rem;color:var(--muted);margin-top:4px">Select which skills you will exchange in this session.</p>
       </div>
 
@@ -300,7 +369,7 @@
 <div id="page-sessions" class="page">
   <div class="sessions-page">
     <div class="container">
-      <h1>My Sessions</h1>
+      <h1 data-i18n="nav.sessions">My Sessions</h1>
       <div id="sessions-list"><div class="spinner">Loading…</div></div>
     </div>
   </div>
@@ -346,8 +415,8 @@
   <div class="modal">
     <button class="modal-close-btn" onclick="closeAuthModal()">✕</button>
     <div class="modal-tabs">
-      <button class="modal-tab active" id="tab-login"    onclick="switchTab('login')">Sign In</button>
-      <button class="modal-tab"        id="tab-register" onclick="switchTab('register')">Sign Up</button>
+      <button class="modal-tab active" id="tab-login"    onclick="switchTab('login')" data-i18n="auth.in">Sign In</button>
+      <button class="modal-tab"        id="tab-register" onclick="switchTab('register')" data-i18n="auth.up">Sign Up</button>
     </div>
     <div id="login-form">
       <div class="err-banner" id="login-err"></div>
@@ -356,17 +425,17 @@
         <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"/>
       </div>
       <div class="form-group">
-        <label for="login-pass">Password</label>
+        <label for="login-pass" data-i18n="auth.pass">Password</label>
         <input type="password" id="login-pass" placeholder="Your password" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()"/>
       </div>
-      <button class="btn-primary" style="width:100%;margin-top:6px" id="login-btn" onclick="doLogin()">Sign In</button>
+      <button class="btn-primary" style="width:100%;margin-top:6px" id="login-btn" onclick="doLogin()" data-i18n="auth.in">Sign In</button>
       <div class="auth-switch" style="margin-top:10px">Forgot your password? <a onclick="closeAuthModal();openForgotModal()">Reset it</a></div>
       <div class="auth-switch">Don't have an account? <a onclick="switchTab('register')">Sign up free</a></div>
     </div>
     <div id="register-form" style="display:none">
       <div class="err-banner" id="reg-err"></div>
       <div class="form-group">
-        <label for="reg-name">Full Name</label>
+        <label for="reg-name" data-i18n="pf.name">Name</label>
         <input type="text" id="reg-name" placeholder="Your name" autocomplete="name"/>
       </div>
       <div class="form-group">
@@ -374,10 +443,10 @@
         <input type="email" id="reg-email" placeholder="you@example.com" autocomplete="email"/>
       </div>
       <div class="form-group">
-        <label for="reg-pass">Password</label>
+        <label for="reg-pass" data-i18n="auth.pass">Password</label>
         <input type="password" id="reg-pass" placeholder="Min 6 characters" autocomplete="new-password" onkeydown="if(event.key==='Enter')doRegister()"/>
       </div>
-      <button class="btn-primary" style="width:100%;margin-top:6px" id="reg-btn" onclick="doRegister()">Create Account</button>
+      <button class="btn-primary" style="width:100%;margin-top:6px" id="reg-btn" onclick="doRegister()" data-i18n="auth.create">Create Account</button>
       <div class="auth-switch">Already have an account? <a onclick="switchTab('login')">Sign in</a></div>
     </div>
   </div>
@@ -429,6 +498,40 @@
     <div class="auth-switch" style="margin-top:14px"><a onclick="closeForgotModal();openAuthModal('login')">Back to Sign In</a></div>
   </div>
 </div>
-<script src="/static/js/main.js?v=1"></script>
+<!-- CREATE GROUP MODAL -->
+<div class="modal-overlay" id="group-modal">
+  <div class="modal" style="max-width:440px">
+    <button class="modal-close-btn" onclick="closeCreateGroup()" aria-label="Close">✕</button>
+    <h2 data-i18n="cg.title">Create a group</h2>
+    <p class="sub" data-i18n="cg.sub">Bring people together around a place, a skill or an interest.</p>
+    <div class="err-banner" id="cg-err"></div>
+    <div class="form-group">
+      <label data-i18n="cg.emoji">Icon</label>
+      <div class="emoji-pick" id="cg-emoji"></div>
+    </div>
+    <div class="form-group">
+      <label for="cg-name" data-i18n="cg.name">Group name</label>
+      <input type="text" id="cg-name" maxlength="60" data-i18n-ph="cg.name.ph" placeholder="e.g. Burmese in Oulu"/>
+    </div>
+    <div class="form-group">
+      <label for="cg-desc" data-i18n="cg.desc">What is it about?</label>
+      <textarea id="cg-desc" maxlength="300" data-i18n-ph="cg.desc.ph" placeholder="Who should join and what you'll talk about"></textarea>
+    </div>
+    <button class="btn-primary" style="width:100%" id="cg-btn" onclick="submitCreateGroup()" data-i18n="cg.btn">Create group</button>
+  </div>
+</div>
+
+<!-- MOBILE BOTTOM TABS (logged in) -->
+<div class="tabbar" id="tabbar" role="navigation" aria-label="Main">
+  <button data-pg="feed" onclick="goHome()"><span class="ti">🏠</span><span data-i18n="nav.home">Home</span></button>
+  <button data-pg="groups" onclick="showPage('groups')"><span class="ti">👥</span><span data-i18n="nav.groups">Groups</span></button>
+  <button data-pg="browse" onclick="showPage('browse')"><span class="ti">🤝</span><span data-i18n="nav.people">People</span></button>
+  <button data-pg="messages" onclick="showPage('messages')"><span class="ti">💬<i class="tab-dot" id="tab-msg-dot"></i></span><span data-i18n="nav.messages">Messages</span></button>
+  <button data-pg="create-profile" onclick="showPage('create-profile')"><span class="ti">🙂</span><span data-i18n="nav.me">Me</span></button>
+</div>
+
+<script src="/static/js/i18n.js?v=1"></script>
+<script src="/static/js/main.js?v=2"></script>
+<script src="/static/js/community.js?v=1"></script>
 </body>
 </html>
