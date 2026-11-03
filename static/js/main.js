@@ -1,5 +1,7 @@
 /*
-  Skill Swap — main.js
+  Peerly (formerly Skill Swap) — main.js
+  Community features (feed, groups, onboarding) live in community.js,
+  and English/Burmese text lives in i18n.js.
   This is the entire frontend. I chose not to use React or any framework —
   everything is vanilla JavaScript. The whole site is one HTML page and I
   show/hide different sections depending on what the user clicks.
@@ -65,7 +67,9 @@ async function init() {
   try {
     S.user = await api('GET', '/api/me');
     onLoggedIn();
+    goHome(); // logged-in people land on their feed instead of the landing page
   } catch { /* no session — guest mode */ }
+  if (window.handleDeepLink) handleDeepLink(); // e.g. a shared /room/12 link
 
   // Default the schedule date to today
   const today = new Date();
@@ -117,9 +121,10 @@ function showPage(pg) {
       }, 8000);
     }
   }
+  if (window.onPageShown) onPageShown(pg);
   if (pg === 'create-profile' && S.user) {
     // Populate the profile form with existing data when the user opens it
-    document.getElementById('pf-title').textContent = S.user.is_admin ? '\u2699\uFE0F My Profile (Admin)' : 'My Profile';
+    document.getElementById('pf-title').textContent = S.onboarding ? t('pf.create') : (S.user.is_admin ? '\u2699\uFE0F ' + t('pf.mine') + ' (Admin)' : t('pf.mine'));
     document.getElementById('pf-name').value = S.user.name || '';
     document.getElementById('pf-bio').value  = S.user.bio  || '';
     const avEl = document.getElementById('av-preview');
@@ -162,6 +167,8 @@ function updateNav() {
   document.getElementById('nav-sessions-link').style.display   = loggedIn ? '' : 'none';
   const adminLink = document.getElementById('nav-admin-link');
   if (adminLink) adminLink.style.display = (loggedIn && S.user && S.user.is_admin) ? '' : 'none';
+  document.body.classList.toggle('logged-in', loggedIn);
+  if (window.updateTabbar) updateTabbar();
 }
 
 function heroSearch() {
@@ -205,9 +212,11 @@ async function doLogin() {
     const data = await api('POST', '/api/login', {email, password: pass});
     S.user = data.user;
     closeAuthModal(); onLoggedIn();
-    showToast('Welcome back, ' + S.user.name + '! \uD83D\uDC4B');
+    if (!S.user.onboarded && !(S.user.teach||[]).length) { startOnboarding(); }
+    else goHome();
+    showToast(t('toast.welcomeback', {name: S.user.name}));
   } catch(e) { err.textContent = e.message; err.classList.add('show'); }
-  finally { btn.disabled = false; btn.textContent = 'Sign In'; }
+  finally { btn.disabled = false; btn.textContent = t('auth.in'); }
 }
 
 async function doRegister() {
@@ -226,13 +235,10 @@ async function doRegister() {
     const data = await api('POST', '/api/register', {name, email, password: pass});
     S.user = data.user;
     closeAuthModal(); onLoggedIn();
-    document.getElementById('pf-title').textContent = 'Create Your Profile';
-    document.getElementById('pf-name').value = S.user.name;
-    S.teachTags = []; S.learnTags = []; renderTagsUI();
-    showPage('create-profile');
-    showToast('Account created! Add your skills to get started.');
+    startOnboarding();
+    showToast(t('toast.created'));
   } catch(e) { err.textContent = e.message; err.classList.add('show'); }
-  finally { btn.disabled = false; btn.textContent = 'Create Account'; }
+  finally { btn.disabled = false; btn.textContent = t('auth.create'); }
 }
 
 // onLoggedIn runs after every successful login or on page load with an existing session.
@@ -243,8 +249,6 @@ function onLoggedIn() {
   refreshSessionBadge();
   startSessionPolling();
   startUnreadPolling();
-  const heroCta = document.getElementById('hero-cta-btn');
-  if (heroCta) heroCta.textContent = 'Edit Profile';
   requestNotifPermission();
 }
 
@@ -285,12 +289,8 @@ async function doLogout() {
   if (list) list.innerHTML = '<div style="padding:20px;color:var(--gray);font-size:.88rem">Loading\u2026</div>';
   const main = document.getElementById('msg-main');
   if (main) main.innerHTML = '<div class="msg-empty"><span style="font-size:2.2rem">\uD83D\uDCAC</span><span>Select a conversation to start messaging</span></div>';
-  const heroCta = document.getElementById('hero-cta-btn');
-  if (heroCta) heroCta.textContent = 'Create Profile';
-  const heroBtn = document.getElementById('hero-cta-btn');
-  if (heroBtn) heroBtn.textContent = 'Create Profile';
   showPage('home');
-  showToast('Logged out. See you soon!');
+  showToast(t('toast.loggedout'));
 }
 
 // Profile
@@ -368,9 +368,10 @@ async function saveProfile() {
     });
     S.avatarData = null;
     _usersCache = null; _usersCacheTime = 0;
-    showSuccess('\uD83C\uDF89', 'Profile Saved!', 'Your profile is live, ' + S.user.name + '! Start browsing matches.', () => showPage('browse'));
+    if (S.onboarding) { showPage('onboard'); return; }
+    showSuccess('\uD83C\uDF89', t('pf.saved'), t('pf.saved.msg', {name: S.user.name}), () => goHome());
   } catch(e) { showToast('Error: ' + e.message); }
-  finally { btn.disabled = false; btn.textContent = 'Save Profile & Continue'; }
+  finally { btn.disabled = false; btn.textContent = t('pf.save'); }
 }
 
 // Browse
@@ -574,7 +575,9 @@ async function refreshUnreadBadge() {
       const newConvs = convs.filter(c => c.unread > 0);
       if (newConvs.length > 0) {
         const sender = newConvs[0].user.name;
-        const preview = newConvs[0].last_message || 'sent you a message';
+        const raw = newConvs[0].last_message || '';
+        const preview = dmPreviewText(raw) || 'sent you a message';
+        if (isCallMarker(raw) && window.showIncomingCall) showIncomingCall(newConvs[0].user, raw);
         if (document.hidden) {
           showMsgNotification(sender, preview);
         } else if (S.page !== 'messages') {
@@ -587,6 +590,8 @@ async function refreshUnreadBadge() {
 }
 
 function updateMsgBadge(count) {
+  const dot = document.getElementById('tab-msg-dot');
+  if (dot) dot.classList.toggle('show', count > 0);
   const link = document.getElementById('nav-msg-link');
   if (!link) return;
   let badge = link.querySelector('.nav-badge');
@@ -623,8 +628,8 @@ function renderConvList(convs) {
     return '<div class="' + active + '" onclick="openConversation(' + u.id + ',\'' + en + '\')">'
       + av
       + '<div class="msg-item-info">'
-      + '<div class="msg-item-name">' + u.name + udot + '</div>'
-      + '<div class="' + pvcls + '">' + (c.last_message || '\u2026') + '</div>'
+      + '<div class="msg-item-name">' + esc(u.name) + udot + '</div>'
+      + '<div class="' + pvcls + '">' + dmPreview(c.last_message) + '</div>'
       + '</div>'
       + '<div class="msg-item-actions">'
       + '<button class="msg-item-btn" onclick="event.stopPropagation();viewProfile(' + u.id + ')" title="View profile">\uD83D\uDC64</button>'
@@ -648,6 +653,7 @@ async function loadConversations() {
 async function openConversation(userId, name) {
   if (!S.user) return;
   S.activeConv = userId;
+  S.activeConvName = name;
   stopPolling();
   document.getElementById('page-messages').classList.add('conv-open');
 
@@ -681,11 +687,13 @@ async function openConversation(userId, name) {
     + '<div class="msg-topbar-left" onclick="viewProfile(' + userId + ')" style="cursor:pointer;gap:12px">'
     + topbarAv
     + '<div>'
-    + '<div class="msg-topbar-name">' + name + '</div>'
+    + '<div class="msg-topbar-name">' + esc(name) + '</div>'
     + '<div style="font-size:.75rem;color:var(--blue)">View profile \u2192</div>'
     + '</div></div>'
     + '<div style="display:flex;gap:8px;align-items:center">'
-    + '<button class="btn-view" style="font-size:.82rem;padding:8px 14px" onclick="viewProfile(' + userId + ')">Profile</button>'
+    + '<button class="call-icon-btn" title="Voice call" onclick="startDMCall(' + userId + ', false)">\uD83D\uDCDE</button>'
+    + '<button class="call-icon-btn" title="Video call" onclick="startDMCall(' + userId + ', true)">\uD83C\uDFA5</button>'
+    + '<button class="btn-view dm-profile-btn" style="font-size:.82rem;padding:8px 14px" onclick="viewProfile(' + userId + ')">Profile</button>'
     + '<button class="btn-primary" style="font-size:.82rem;padding:8px 16px" onclick="openSchedule(' + userId + ',\'' + en + '\')">Schedule Session</button>'
     + '</div></div>'
     + '<div class="msg-body" id="msg-body"></div>'
@@ -745,7 +753,7 @@ function renderMessages(msgs, body) {
       + ' ondblclick="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ')"'
       + ' oncontextmenu="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ');return false;">'
       + '<div class="msg-bubble ' + (isMe ? 'me' : 'them') + '">'
-      + m.content
+      + renderDMContent(m.content, m.sender_id)
       + '<div class="msg-time">' + new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + tick + '</div>'
       + '</div></div>';
   }).join('');
