@@ -79,7 +79,11 @@ function requireLogin() {
 
 // ── Navigation hooks (called from main.js) ────────────────
 
-function goHome() { showPage(S.user ? 'feed' : 'home'); }
+function goHome() {
+  // A shared room link the person opened before logging in
+  if (S.user && S.pendingRoom) { const id = S.pendingRoom; S.pendingRoom = null; openRoom(id); return; }
+  showPage(S.user ? 'feed' : 'home');
+}
 
 function onPageShown(pg) {
   updateTabbar();
@@ -102,7 +106,7 @@ function updateTabbar() {
   if (!bar) return;
   bar.querySelectorAll('button').forEach(b => {
     const pg = b.getAttribute('data-pg');
-    const active = pg === S.page || (pg === 'groups' && S.page === 'group');
+    const active = pg === S.page || (pg === 'groups' && S.page === 'group') || (pg === 'rooms' && S.page === 'room');
     b.classList.toggle('active', active);
   });
 }
@@ -595,7 +599,7 @@ async function finishOnboarding() {
     S.onboarding = false;
     C.feedScope = 'mine';
     document.querySelectorAll('.feed-tab').forEach(b => b.classList.toggle('active', b.getAttribute('data-scope') === 'mine'));
-    showPage('feed');
+    goHome();
     showToast(t('onb.welcome', {name: (S.user.name || '').split(' ')[0]}));
   } catch (e) { showToast(e.message); }
   finally { btn.disabled = false; }

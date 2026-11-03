@@ -32,7 +32,9 @@ func initDB() {
 	if _, statErr := os.Stat("/app/data"); statErr != nil {
 		dbPath = "./skillswap.db"
 	}
-	db, err = sql.Open("sqlite3", dbPath)
+	// WAL mode lets reads and writes happen at the same time (the default mode makes
+	// every read block writes, which stalled requests once live rooms were added).
+	db, err = sql.Open("sqlite3", "file:"+dbPath+"?_journal_mode=WAL&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=off")
 	if err != nil {
 		log.Fatal("couldn't open the database file:", err)
 	}
@@ -206,6 +208,11 @@ func generateToken() string {
 	return generateSecureToken()
 }
 
+// clean removes < and > so names, bios and skills can never carry HTML into the page.
+var tagStripper = strings.NewReplacer("<", "", ">", "")
+
+func clean(s string, max int) string { return trimLimit(tagStripper.Replace(s), max) }
+
 // decodeJSON reads a JSON request body into v.
 func decodeJSON(r *http.Request, v interface{}) error {
 	return json.NewDecoder(r.Body).Decode(v)
@@ -241,8 +248,10 @@ func getUserFromToken(r *http.Request) (int, error) {
 		db.Exec("DELETE FROM auth_tokens WHERE token = ?", token)
 		return 0, fmt.Errorf("token expired")
 	}
-	// Every API call refreshes last_used so the online indicator stays accurate
-	db.Exec("UPDATE auth_tokens SET last_used = ? WHERE token = ?", time.Now(), token)
+	// Refresh last_used (for the online dot) at most once a minute per token,
+	// instead of writing to the database on every single request.
+	db.Exec("UPDATE auth_tokens SET last_used = ? WHERE token = ? AND last_used < ?",
+		time.Now(), token, time.Now().Add(-time.Minute))
 	return userID, nil
 }
 
@@ -334,6 +343,11 @@ func handleRegister(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Hash the password with bcrypt before storing — never store plain text passwords
+	body.Name = clean(body.Name, 60)
+	if body.Name == "" || !strings.Contains(body.Email, "@") || len(body.Password) < 6 {
+		jsonError(w, "Please enter your name, a valid email and a password of 6+ characters", http.StatusBadRequest)
+		return
+	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
 	result, err := db.Exec("INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
 		body.Name, strings.ToLower(body.Email), string(hash))
@@ -433,9 +447,19 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 		Learn       []string `json:"learn"`
 	}
 	json.NewDecoder(r.Body).Decode(&body)
-	if body.SessionPref == "" {
+	if body.SessionPref != "video" && body.SessionPref != "in-person" {
 		body.SessionPref = "both"
 	}
+	body.Name, body.Bio, body.Location = clean(body.Name, 60), clean(body.Bio, 1000), clean(body.Location, 80)
+	if body.Name == "" {
+		jsonError(w, "Name can't be empty", http.StatusBadRequest)
+		return
+	}
+	// Only accept avatar paths this server created
+	if body.Avatar != "" && !strings.HasPrefix(body.Avatar, "/uploads/") && !strings.HasPrefix(body.Avatar, "/static/avatars/") {
+		body.Avatar = ""
+	}
+	body.Avatar = strings.NewReplacer(`"`, "", "'", "", " ", "").Replace(body.Avatar)
 
 	db.Exec("UPDATE users SET name=?, bio=?, avatar=?, location=?, session_pref=? WHERE id=?",
 		body.Name, body.Bio, body.Avatar, body.Location, body.SessionPref, userID)
@@ -443,10 +467,14 @@ func handleUpdateProfile(w http.ResponseWriter, r *http.Request) {
 	// Replace all skills — delete old ones and re-insert the new list
 	db.Exec("DELETE FROM skills WHERE user_id = ?", userID)
 	for _, s := range body.Teach {
-		db.Exec("INSERT INTO skills (user_id, skill, type) VALUES (?, ?, 'teach')", userID, s)
+		if s = clean(s, 40); s != "" {
+			db.Exec("INSERT INTO skills (user_id, skill, type) VALUES (?, ?, 'teach')", userID, s)
+		}
 	}
 	for _, s := range body.Learn {
-		db.Exec("INSERT INTO skills (user_id, skill, type) VALUES (?, ?, 'learn')", userID, s)
+		if s = clean(s, 40); s != "" {
+			db.Exec("INSERT INTO skills (user_id, skill, type) VALUES (?, ?, 'learn')", userID, s)
+		}
 	}
 	u, _ := loadUser(userID)
 	jsonOK(w, u)
@@ -574,6 +602,11 @@ func handleMessages(w http.ResponseWriter, r *http.Request) {
 			Content    string `json:"content"`
 		}
 		json.NewDecoder(r.Body).Decode(&body)
+		body.Content = trimLimit(body.Content, 4000)
+		if body.Content == "" || body.ReceiverID == 0 {
+			jsonError(w, "Message can't be empty", http.StatusBadRequest)
+			return
+		}
 		db.Exec("INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)",
 			userID, body.ReceiverID, body.Content)
 		jsonOK(w, map[string]string{"status": "sent"})
@@ -1330,6 +1363,7 @@ func main() {
 	seedDB()
 	initUploads()
 	initCommunityDB()
+	initRoomsDB()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -1367,6 +1401,12 @@ func main() {
 	http.HandleFunc("/api/onboarded", handleOnboarded)
 	http.HandleFunc("/api/stats", handleStats)
 	http.Handle("/uploads/", uploadsHandler())
+
+	// Live rooms (watch together)
+	http.HandleFunc("/api/rooms", handleRooms)
+	http.HandleFunc("/api/rooms/", handleRoomRoutes)
+	http.HandleFunc("/api/calls/config", handleCallConfig)
+	http.HandleFunc("/api/calls/dm/", handleDMCall)
 
 	// Serve static files (HTML, CSS, JS, avatar images) with no-cache headers
 	http.Handle("/static/", http.StripPrefix("/static/",

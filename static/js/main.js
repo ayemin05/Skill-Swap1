@@ -69,6 +69,7 @@ async function init() {
     onLoggedIn();
     goHome(); // logged-in people land on their feed instead of the landing page
   } catch { /* no session — guest mode */ }
+  if (window.handleDeepLink) handleDeepLink(); // e.g. a shared /room/12 link
 
   // Default the schedule date to today
   const today = new Date();
@@ -574,7 +575,9 @@ async function refreshUnreadBadge() {
       const newConvs = convs.filter(c => c.unread > 0);
       if (newConvs.length > 0) {
         const sender = newConvs[0].user.name;
-        const preview = newConvs[0].last_message || 'sent you a message';
+        const raw = newConvs[0].last_message || '';
+        const preview = dmPreviewText(raw) || 'sent you a message';
+        if (isCallMarker(raw) && window.showIncomingCall) showIncomingCall(newConvs[0].user, raw);
         if (document.hidden) {
           showMsgNotification(sender, preview);
         } else if (S.page !== 'messages') {
@@ -625,8 +628,8 @@ function renderConvList(convs) {
     return '<div class="' + active + '" onclick="openConversation(' + u.id + ',\'' + en + '\')">'
       + av
       + '<div class="msg-item-info">'
-      + '<div class="msg-item-name">' + u.name + udot + '</div>'
-      + '<div class="' + pvcls + '">' + (c.last_message || '\u2026') + '</div>'
+      + '<div class="msg-item-name">' + esc(u.name) + udot + '</div>'
+      + '<div class="' + pvcls + '">' + dmPreview(c.last_message) + '</div>'
       + '</div>'
       + '<div class="msg-item-actions">'
       + '<button class="msg-item-btn" onclick="event.stopPropagation();viewProfile(' + u.id + ')" title="View profile">\uD83D\uDC64</button>'
@@ -650,6 +653,7 @@ async function loadConversations() {
 async function openConversation(userId, name) {
   if (!S.user) return;
   S.activeConv = userId;
+  S.activeConvName = name;
   stopPolling();
   document.getElementById('page-messages').classList.add('conv-open');
 
@@ -683,11 +687,13 @@ async function openConversation(userId, name) {
     + '<div class="msg-topbar-left" onclick="viewProfile(' + userId + ')" style="cursor:pointer;gap:12px">'
     + topbarAv
     + '<div>'
-    + '<div class="msg-topbar-name">' + name + '</div>'
+    + '<div class="msg-topbar-name">' + esc(name) + '</div>'
     + '<div style="font-size:.75rem;color:var(--blue)">View profile \u2192</div>'
     + '</div></div>'
     + '<div style="display:flex;gap:8px;align-items:center">'
-    + '<button class="btn-view" style="font-size:.82rem;padding:8px 14px" onclick="viewProfile(' + userId + ')">Profile</button>'
+    + '<button class="call-icon-btn" title="Voice call" onclick="startDMCall(' + userId + ', false)">\uD83D\uDCDE</button>'
+    + '<button class="call-icon-btn" title="Video call" onclick="startDMCall(' + userId + ', true)">\uD83C\uDFA5</button>'
+    + '<button class="btn-view dm-profile-btn" style="font-size:.82rem;padding:8px 14px" onclick="viewProfile(' + userId + ')">Profile</button>'
     + '<button class="btn-primary" style="font-size:.82rem;padding:8px 16px" onclick="openSchedule(' + userId + ',\'' + en + '\')">Schedule Session</button>'
     + '</div></div>'
     + '<div class="msg-body" id="msg-body"></div>'
@@ -747,7 +753,7 @@ function renderMessages(msgs, body) {
       + ' ondblclick="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ')"'
       + ' oncontextmenu="showMsgMenu(event,' + m.id + ',' + (isMe ? 1 : 0) + ');return false;">'
       + '<div class="msg-bubble ' + (isMe ? 'me' : 'them') + '">'
-      + m.content
+      + renderDMContent(m.content, m.sender_id)
       + '<div class="msg-time">' + new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'}) + tick + '</div>'
       + '</div></div>';
   }).join('');

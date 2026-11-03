@@ -521,6 +521,7 @@ func deleteCommunityData(userID int) {
 	db.Exec("DELETE FROM comments      WHERE user_id=?", userID)
 	db.Exec("DELETE FROM post_likes    WHERE user_id=?", userID)
 	db.Exec("DELETE FROM group_members WHERE user_id=?", userID)
+	deleteRoomData(userID)
 }
 
 // ── Groups ──────────────────────────────────────────────────
@@ -661,6 +662,8 @@ func handleGroupRoutes(w http.ResponseWriter, r *http.Request) {
 			deletePost(id)
 		}
 		db.Exec("DELETE FROM group_members WHERE group_id=?", groupID)
+		db.Exec("DELETE FROM room_messages WHERE room_id IN (SELECT id FROM rooms WHERE group_id=?)", groupID)
+		db.Exec("DELETE FROM rooms WHERE group_id=?", groupID)
 		db.Exec("DELETE FROM groups_ WHERE id=?", groupID)
 		jsonOK(w, map[string]string{"status": "deleted"})
 

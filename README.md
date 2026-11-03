@@ -2,13 +2,20 @@
 
 **Learn together. Grow together.** Peerly turns Skill Swap into a community: people make friends, join groups, post in a feed and still swap skills 1-to-1. It starts with Myanmar people around the world, then grows globally.
 
-### New in the Peerly upgrade
+### Live rooms (newest)
+- **Watch together** — YouTube or uploaded video synced for everyone, chat beside it, emoji reactions (`rooms.go`, `static/js/rooms.js`)
+- **Study rooms** with a shared focus/break timer, and **Hangouts** for voice
+- **Voice / video / screen share** in every room, plus 1-to-1 calls in Messages, via LiveKit (`livekit.go`, `static/js/calls.js`)
+- Every group gets a **Lounge** for group chat and group calls
+- See **ROADMAP.md** for how to turn on calls and what to build next
+
+### Peerly upgrade
 - **Community feed** — text + photo posts, likes, comments, "Everyone" / "My groups" tabs (`community.go`, `static/js/community.js`)
 - **Groups** — 8 starter groups (Burmese in Finland, Burmese Worldwide, English Learners, Tech & Coding, …), join/leave, create your own, group pages
 - **Welcome flow** — sign up → profile → pick groups → feed
 - **English / Burmese toggle** — all new screens and the main navigation (`static/js/i18n.js`)
 - **Mobile bottom tab bar**, new jade + saffron brand (`static/css/peerly.css`)
-- **Fixes** — random session tokens (were timestamp-based), uploads saved on the Fly volume (`/app/data/uploads`) so photos survive redeploys, image type checks
+- **Fixes** — SQLite WAL mode (no more 5-second stalls), HTML stripped from names/bios and escaped in DMs, random session tokens (were timestamp-based), uploads saved on the Fly volume (`/app/data/uploads`) so photos survive redeploys, image type checks
 
 ---
 
